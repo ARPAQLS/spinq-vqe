@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spinq-vqe"
+version = "0.1.0"
+description = "Variational Quantum Simulation of Antiferromagnetic Hamiltonians"
+authors = [{ name = "ARPA Quantum Logical Systems (QONDRA)" }]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.11"
+keywords = ["quantum", "VQE", "QAOA", "spintronics", "antiferromagnet", "kagome"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "pennylane>=0.39",
+    "pennylane-lightning>=0.39",
+    "jax[cpu]",
+    "numpy",
+    "scipy",
+    "networkx",
+    "matplotlib",
+    "plotly",
+]
+
+[project.optional-dependencies]
+ed = [
+    "quspin",
+    "openfermion",
+]
+data = [
+    "mp-api",
+    "scikit-learn",
+    "pandas",
+    "matminer",
+]
+dev = [
+    "jupyter",
+    "jupyterlab",
+    "pytest",
+    "ruff",
+]
+all = ["spinq-vqe[ed,data,dev]"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E203", "E501"]
