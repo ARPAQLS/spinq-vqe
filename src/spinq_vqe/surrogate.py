@@ -346,19 +346,22 @@ def train_surrogate(
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
 
+        # early_stopping needs an internal validation split; disable for small datasets
+        use_early_stopping = len(dataset.records) >= 30
+
         model = MLPRegressor(
             hidden_layer_sizes=hidden_layer_sizes,
             activation="relu",
             solver="adam",
             max_iter=max_iter,
             random_state=random_state,
-            early_stopping=True,
-            n_iter_no_change=50,
+            early_stopping=use_early_stopping,
         )
         model.fit(X_scaled, y)
 
         cv_r2 = float("nan")
-        if len(dataset.records) >= cv_folds * 2:
+        min_cv_samples = cv_folds * 4  # need enough per fold for reliable CV
+        if len(dataset.records) >= min_cv_samples:
             scores = cross_val_score(model, X_scaled, y, cv=cv_folds, scoring="r2")
             cv_r2 = float(scores.mean())
 
