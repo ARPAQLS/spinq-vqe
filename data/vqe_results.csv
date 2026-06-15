@@ -1,4 +1,4 @@
-Ansatz,Params,Best E,Err %,Steps
-HVA (depth=6),18,0.69956645,149.199,2000
-HEA (depth=3),27,-0.19513629,86.276,500
-ED (exact),--,-1.42190399,0.0,--
+Method,Ansatz,Params,Best E,Err %,Evals
+COBYLA,HEA d=3,27,-1.2845631,9.659,801
+Adam,HEA d=3,27,0.14131268,109.938,1000
+ED (exact),--,--,-1.42190399,0.0,--
