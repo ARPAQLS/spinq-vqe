@@ -6,16 +6,13 @@
 
 Part of [ARPA Quantum Logical Systems — QONDRA](https://github.com/arpaqls) &nbsp;·&nbsp; [qondra@arpacorp.net](mailto:qondra@arpacorp.net)
 
+<br>
+
 ![Python](https://img.shields.io/badge/Python-3.11%2B-C7E4CA?style=flat-square&labelColor=756F6A)
 ![PennyLane](https://img.shields.io/badge/PennyLane-0.39%2B-DBD3DC?style=flat-square&labelColor=756F6A)
 [![License](https://img.shields.io/badge/License-MIT-F4ECC8?style=flat-square&labelColor=756F6A)](LICENSE)
-![SciPy](https://img.shields.io/badge/Optimizer-COBYLA%2FAdam-F0D9CC?style=flat-square&labelColor=756F6A)
-![Status](https://img.shields.io/badge/Status-Research-EBD8DC?style=flat-square&labelColor=756F6A)
+![Optimizer](https://img.shields.io/badge/Optimizer-COBYLA%2FAdam-F0D9CC?style=flat-square&labelColor=756F6A)
 
-![A1](https://img.shields.io/badge/A1-VQE_Kagome_AFM-C7E4CA?style=flat-square&labelColor=756F6A)
-![B2](https://img.shields.io/badge/B2-SOC_QAOA-DBD3DC?style=flat-square&labelColor=756F6A)
-![Notebooks](https://img.shields.io/badge/Notebooks-3%2F5_complete-F0D9CC?style=flat-square&labelColor=756F6A)
-![ED Error](https://img.shields.io/badge/VQE_error-9.66%25-EBD8DC?style=flat-square&labelColor=756F6A)
 
 </div>
 
