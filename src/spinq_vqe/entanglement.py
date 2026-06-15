@@ -243,7 +243,7 @@ def sublattice_mutual_info_matrix(
     for i, j in combinations(range(n_sl), 2):
         I_ij = mutual_information(
             statevector,
-            sublattice_A=sublattices[i],
+            subsystem_A=sublattices[i],
             subsystem_B=sublattices[j],
             n_sites=n_sites,
             base=base,
@@ -251,4 +251,31 @@ def sublattice_mutual_info_matrix(
         matrix[i, j] = I_ij
         matrix[j, i] = I_ij  # symmetric
 
+    return matrix
+
+
+def mutual_information_matrix(
+    statevector: np.ndarray,
+    n_sites: int,
+    base: float = 2.0,
+) -> np.ndarray:
+    """
+    Compute the full N×N pairwise mutual information matrix between all sites.
+
+    Parameters
+    ----------
+    statevector : np.ndarray, shape (2**n_sites,)
+    n_sites : int
+    base : float
+
+    Returns
+    -------
+    np.ndarray, shape (n_sites, n_sites)
+        Symmetric matrix; diagonal is 0.
+    """
+    matrix = np.zeros((n_sites, n_sites))
+    for i, j in combinations(range(n_sites), 2):
+        I_ij = mutual_information(statevector, [i], [j], n_sites, base=base)
+        matrix[i, j] = I_ij
+        matrix[j, i] = I_ij
     return matrix

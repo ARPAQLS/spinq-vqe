@@ -3,24 +3,28 @@ ansatz.py
 ---------
 Variational ansatze for VQE on the Kagome antiferromagnet.
 
-Two ansatze are implemented and compared:
+Three ansatze are implemented:
 
 1. **HEA** (Hardware-Efficient Ansatz)
    Alternating layers of single-qubit RY rotations and CNOT entanglers
-   arranged along Kagome nearest-neighbor bonds. Fast to construct and
-   optimize; known to suffer barren plateau gradients at large N.
+   on Kagome nearest-neighbor bonds. General-purpose; suffers barren
+   plateau gradients at random initialisation for large N.
 
-2. **MERA** (Multi-scale Entanglement Renormalization Ansatz — simplified)
+2. **HVA** (Hamiltonian Variational Ansatz)  ← preferred for Heisenberg
+   Trotterised evolution under the Kagome Hamiltonian terms (IsingXX,
+   IsingYY, IsingZZ per bond, per layer). One (θ_XX, θ_YY, θ_ZZ) per
+   layer, shared across all bonds. Provably avoids barren plateaus at
+   small-angle initialisation for translation-invariant spin Hamiltonians.
+
+3. **MERA** (Multi-scale Entanglement Renormalization Ansatz — simplified)
    Two-scale disentangler + isometry structure inspired by Vidal (2007).
-   Uses parameterized two-qubit unitaries instead of optimized tensors.
-   Better respects the frustrated geometry; expected to show shallower
-   barren plateau signatures.
+   More parameters than needed; included as a comparison baseline.
 
 References
 ----------
-- Kandala et al. (2017) Nature 549, 242          — Hardware-efficient ansatz
+- Kandala et al. (2017) Nature 549, 242          — hardware-efficient ansatz
+- Wiersema et al. (2020) PRX Quantum 1, 020319   — HVA, no barren plateau
 - Vidal (2007) PRL 99, 220405                    — MERA
-- Wiersema et al. (2020) PRX Quantum 1, 020319   — Hamiltonian variational ansatz
 """
 
 from __future__ import annotations
@@ -187,40 +191,104 @@ def mera_n_params(G: nx.Graph) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Hamiltonian Variational Ansatz (HVA)  — preferred for Heisenberg models
+# ---------------------------------------------------------------------------
+
+
+def hva_ansatz(
+    params: list | np.ndarray,
+    n_sites: int,
+    depth: int,
+    edges: list[tuple[int, int]],
+) -> None:
+    """
+    Hamiltonian Variational Ansatz for the Heisenberg model.
+
+    Structure per layer::
+
+        for each bond (i, j):
+            IsingXX(2θ_XX, [i, j])   ≡  exp(-iθ_XX · X⊗X)
+            IsingYY(2θ_YY, [i, j])   ≡  exp(-iθ_YY · Y⊗Y)
+            IsingZZ(2θ_ZZ, [i, j])   ≡  exp(-iθ_ZZ · Z⊗Z)
+
+    One (θ_XX, θ_YY, θ_ZZ) per layer, shared across all bonds.
+    This is valid because the Kagome Hamiltonian has uniform exchange
+    coupling J on all bonds.
+
+    Parameters
+    ----------
+    params : array-like, shape (depth * 3,)
+        Flat array of (theta_XX, theta_YY, theta_ZZ) per layer.
+        Use small-angle initialisation (scale=0.05) — gradients are
+        O(1) at θ≋0 for HVA, so no barren plateau.
+    n_sites : int
+        Number of qubits (unused in circuit but kept for API consistency).
+    depth : int
+        Number of Trotter layers.
+    edges : list of (int, int)
+        Kagome bond list.
+
+    References
+    ----------
+    Wiersema et al. (2020) PRX Quantum 1, 020319
+    """
+    params = np.asarray(params).reshape(depth, 3)
+    for layer in range(depth):
+        t_xx, t_yy, t_zz = params[layer]
+        for i, j in edges:
+            qp.IsingXX(2.0 * t_xx, wires=[i, j])
+            qp.IsingYY(2.0 * t_yy, wires=[i, j])
+            qp.IsingZZ(2.0 * t_zz, wires=[i, j])
+
+
+def hva_n_params(depth: int) -> int:
+    """HVA: 3 parameters per layer (θ_XX, θ_YY, θ_ZZ), shared across all bonds."""
+    return depth * 3
+
+
+# ---------------------------------------------------------------------------
 # Initial parameter factory
 # ---------------------------------------------------------------------------
 
 
 def init_params(
-    ansatz: Literal["hea", "mera"],
+    ansatz: Literal["hea", "hva", "mera"],
     n_sites: int,
     G: nx.Graph | None = None,
     depth: int = 3,
     seed: int = 42,
+    scale: float = 1.0,
 ) -> np.ndarray:
     """
     Generate random initial parameters for a given ansatz.
 
     Parameters
     ----------
-    ansatz : {"hea", "mera"}
+    ansatz : {"hea", "hva", "mera"}
     n_sites : int
     G : nx.Graph, required for "mera"
-    depth : int, used for "hea"
+    depth : int
     seed : int
+    scale : float
+        Multiplier on the uniform range [-π, π].
+        For HVA use scale=0.05 (small-angle init — no barren plateau).
+        For HEA use scale=1.0 (random).
 
     Returns
     -------
     np.ndarray
-        Flat array of initial parameters in [-π, π].
+        Flat array of initial parameters in [-π·scale, π·scale].
     """
     rng = np.random.default_rng(seed)
     if ansatz == "hea":
         n = hea_n_params(n_sites, depth)
+    elif ansatz == "hva":
+        n = hva_n_params(depth)
     elif ansatz == "mera":
         if G is None:
             raise ValueError("G (Kagome graph) is required for MERA ansatz.")
         n = mera_n_params(G)
     else:
-        raise ValueError(f"Unknown ansatz: {ansatz!r}. Choose 'hea' or 'mera'.")
-    return rng.uniform(-np.pi, np.pi, size=n)
+        raise ValueError(f"Unknown ansatz: {ansatz!r}. Choose 'hea', 'hva', or 'mera'.")
+    return rng.uniform(-np.pi * scale, np.pi * scale, size=n)
+
