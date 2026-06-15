@@ -1,6 +1,6 @@
 # Notebook Guide
 
-> [← index](index.md)
+> [← docs](README.md)
 
 ---
 
@@ -9,6 +9,7 @@
 ```bash
 python -m venv .venv
 .venv\Scripts\activate        # Windows
+source .venv/bin/activate     # Linux / macOS
 pip install -e ".[dev]"
 jupyter lab
 ```
@@ -39,49 +40,73 @@ All notebooks live in `notebooks/`. Run them in order — later notebooks depend
 
 | N | E₀ (normalized) | Gap Δ |
 |---|-----------------|-------|
-| 9 | −1.42190399 | ≈ 0 |
+| 9 | −1.42190399 | ≈ 0 (degenerate) |
 | 18 | −1.49962859 | 0.037 |
 
 ---
 
-## 02 — VQE Ground State: HVA vs HEA
+## 02 — VQE Ground State
 
 **File:** [`02_vqe_run.ipynb`](../notebooks/02_vqe_run.ipynb)  
-**Status:** 🔬 Running
+**Status:** ✅ Complete
 
 **What it does:**
-- Runs VQE with 5 random seeds for both HVA (primary) and HEA (comparison)
-- HVA: depth=6, 18 params, scale=0.05 init — no barren plateau
-- HEA: depth=3, 27 params, scale=1.0 init — used as baseline
-- Plots convergence curves and gradient variance (barren plateau diagnostic)
-- Saves best statevectors for Notebook 03
+- **COBYLA** (primary): 5 seeds × 5000 evaluations, HEA depth=3, random init `scale=1.0`
+- **Adam** (diagnostic): 2 seeds × 1000 steps — demonstrates the zero-gradient failure
+- Plots COBYLA convergence curves + Adam gradient variance (barren plateau evidence)
+- Saves best statevector to `data/statevector_hea_best.npy` for NB03
+
+**Why COBYLA, not Adam:** `|0⟩⊗N` is a Z-basis eigenstate. All IsingXX/YY/ZZ gradients cancel
+by SU(2) symmetry → Adam has nothing to follow. COBYLA samples the energy landscape
+directly without needing gradients.
 
 **Key outputs:**
 - `figures/vqe_convergence.png`
 - `figures/vqe_bar.png`
 - `data/vqe_results.csv`
-- `data/statevector_hva_best.npy`
 - `data/statevector_hea_best.npy`
 
-**Expected results:** HVA < 10% error from ED; HEA > 50% error (barren plateau demonstration).
+**Results:**
+
+| Method | E₀ | Error vs ED | Evals |
+|--------|----|-------------|-------|
+| COBYLA / HEA depth=3 | −1.28456 | **9.66%** | 801 |
+| Adam / HEA depth=3 | +0.141 | stalled | 1000 |
+| ED exact | −1.42190399 | — | — |
 
 ---
 
 ## 03 — Entanglement Analysis
 
 **File:** [`03_entanglement.ipynb`](../notebooks/03_entanglement.ipynb)  
-**Status:** ⏳ Pending NB02
+**Status:** ✅ Complete
 
-**Depends on:** `data/statevector_hva_best.npy`, `data/statevector_hea_best.npy`
+**Depends on:** `data/statevector_hea_best.npy`
 
-**What it will do:**
-- Von Neumann entropy bipartition scan (all contiguous subsystems of size 1 → 8)
+**What it does:**
+- Single-site Von Neumann entropy for all 9 sites
+- Bipartition scan: S vs subsystem size |A| = 1 → 4
 - 9×9 pairwise mutual information matrix
-- 3×3 sublattice mutual information matrix (A↔B↔C)
-- Single-site entropies across all 9 sites
-- Compare entanglement structure of HVA vs HEA statevectors
+- 3×3 sublattice mutual information matrix (A↔B, A↔C, B↔C)
+- Spin liquid diagnostic interpretation
 
-**Key outputs:** `figures/entanglement_*.png`
+**Key outputs:**
+- `figures/entanglement_bipartition.png`
+- `figures/entanglement_mi_matrix.png`
+- `figures/entanglement_sublattice_mi.png`
+
+**Results:**
+
+| Metric | Value | Interpretation |
+|--------|-------|----------------|
+| Mean single-site S | 0.9066 bits | Near-maximal → strong fluctuations |
+| Max single-site S | 1.000 bits | 7/9 sites maximally entangled |
+| Sublattice I(A:B) | 3.689 bits | Strong inter-sublattice correlations |
+| Sublattice I(A:C/B:C) | 2.235 bits | Full 3-way entanglement |
+| Mean pairwise MI | 0.227 bits | Long-range non-local correlations |
+
+Site 2 shows anomalously low entropy (0.235 bits) consistent with specific frustrated geometry.
+Sites 0 and 1 form a near-perfect Bell pair (singlet on that bond).
 
 ---
 
@@ -89,11 +114,14 @@ All notebooks live in `notebooks/`. Run them in order — later notebooks depend
 
 **File:** `04_soc_qaoa.ipynb`
 
+**Depends on:** `surrogate.py`, `qaoa.py` (both implemented)
+
 **What it will do:**
-- Train MLP surrogate on Materials Project θ_SH data
-- Formulate SOC optimization as QUBO
-- Run QAOA at depth p=1..5 vs classical simulated annealing
-- Rank candidate heterostructure compositions by predicted spin Hall angle
+- Load mock θ_SH dataset (or query Materials Project API with key)
+- Train MLP surrogate (`surrogate.train_surrogate`)
+- Formulate k-from-N heterostructure selection as QUBO
+- Run QAOA depth p=1..5 vs classical greedy + simulated annealing
+- Rank candidate compositions by predicted spin Hall angle
 
 ---
 
@@ -103,9 +131,9 @@ All notebooks live in `notebooks/`. Run them in order — later notebooks depend
 
 **What it will do:**
 - VQE energy error vs system size (N=9, 18, 27)
-- Circuit depth required for < 5% error at each N
-- Gradient variance scaling with N (barren plateau characterization)
-- Estimate crossover point where VQE breaks down vs DMRG
+- COBYLA evaluations required for < 10% error at each N
+- Gradient variance scaling with N (Adam barren plateau characterization)
+- Estimate crossover where COBYLA becomes infeasible vs DMRG
 
 ---
 
@@ -119,4 +147,4 @@ All notebooks live in `notebooks/`. Run them in order — later notebooks depend
   notebooks/01_kagome_hamiltonian.ipynb
 ```
 
-Or simply open JupyterLab and run interactively.
+Or open JupyterLab and run interactively.
