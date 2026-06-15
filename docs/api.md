@@ -1,6 +1,6 @@
 # API Reference
 
-> [← docs](README.md)
+> [← index](README.md)
 
 ---
 

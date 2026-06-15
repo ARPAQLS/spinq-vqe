@@ -1,6 +1,6 @@
 # Physics Background
 
-> [← index](index.md)
+> [← index](README.md)
 
 ---
 

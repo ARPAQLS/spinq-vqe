@@ -1,6 +1,6 @@
 # Notebook Guide
 
-> [← docs](README.md)
+> [← index](README.md)
 
 ---
 

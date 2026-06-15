@@ -1,6 +1,6 @@
 # Ansatz Guide
 
-> [← index](index.md)
+> [← index](README.md)
 
 Three variational ansatze are implemented. **HVA is the primary choice for this system.**
 
