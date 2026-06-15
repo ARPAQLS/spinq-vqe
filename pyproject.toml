@@ -31,7 +31,6 @@ dependencies = [
 [project.optional-dependencies]
 ed = [
     "quspin",
-    "openfermion",
 ]
 data = [
     "mp-api",
