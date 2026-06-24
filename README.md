@@ -78,7 +78,7 @@ Optional: `pip install -e ".[data]"` adds `scikit-learn`, `mp-api`, `pandas` (fo
 | 9  | Exact diag. | −1.42190399 | — | Sparse ED, gap Δ ≈ 0 |
 | 9  | **COBYLA / HEA d=3** | **−1.28456** | **9.66%** | 27 params, 801 evals |
 | 9  | Adam / HEA d=3 | +0.141 | — | Barren plateau stall |
-| 12 | COBYLA / HEA d=2 | see NB05 | see NB05 | 24 params |
+| 12 | COBYLA / HEA d=2 | −1.20351 | 18.70% | 24 params |
 | 18 | Exact diag. | −1.49962859 | — | Spectral gap Δ = 0.037 |
 
 **Why COBYLA, not Adam:** The `|0⟩⊗N` initial state is a Z-basis eigenstate — all IsingXX/YY/ZZ gradients cancel to exactly zero by SU(2) symmetry. COBYLA uses function evaluations directly and is immune to this.
