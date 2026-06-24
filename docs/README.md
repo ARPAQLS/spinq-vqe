@@ -19,7 +19,7 @@
 
 **The physics:** Mn₃Sn is a Kagome antiferromagnet. Its ground state is geometrically frustrated — no classical solution exists. VQE uses a parameterized quantum circuit to approximate the ground state variationally.
 
-**The stack:** PennyLane handles circuits, operators, and optimization. NetworkX builds the Kagome graph. NumPy/SciPy handle numerics. All simulation runs on CPU via `default.qubit`. scikit-learn provides the B2 surrogate MLP.
+**The stack:** PennyLane handles circuits, operators, and optimization. NetworkX builds the Kagome graph. NumPy/SciPy handle numerics. All simulation runs on CPU via `default.qubit`. scikit-learn provides the SOC surrogate MLP.
 
 **The optimizer:** Use **COBYLA** (`run_vqe_cobyla`) for this system — not Adam. The `|0⟩⊗N` initial state is a Z-basis eigenstate where all Ising-gate gradients cancel by SU(2) symmetry. COBYLA samples the energy directly and is immune to this zero-gradient problem.
 
@@ -30,8 +30,8 @@
 - COBYLA/HEA (N=9): E₀ = −1.28456 (9.66% error, 801 evaluations)
 - Mean single-site entropy: 0.9066 bits (near-maximal spin liquid signature)
 - Sublattice MI I(A:B): 3.689 bits
-- SOC QAOA (B2): p=2 recovers global optimum — Mn₃Sn + CrTe₂ + Bi₂Se₃ (θ_SH = 4.263)
-- Scaling (A1): see NB05 for N=12 VQE result and gradient variance analysis
+- SOC QAOA: p=2 recovers global optimum — Mn₃Sn + CrTe₂ + Bi₂Se₃ (θ_SH = 4.263)
+- Scaling (NB05): N=12 VQE error 18.70%, gradient variance barren plateau confirmed
 
 ---
 

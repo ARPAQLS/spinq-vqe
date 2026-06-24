@@ -43,6 +43,8 @@ All notebooks live in `notebooks/`. Run them in order — later notebooks depend
 | 9 | −1.42190399 | ≈ 0 (degenerate) |
 | 18 | −1.49962859 | 0.037 |
 
+<img src="../figures/ed_spectrum.png" alt="ED spectrum N=9 and N=18" width="560">
+
 ---
 
 ## 02 — VQE Ground State
@@ -73,6 +75,8 @@ directly without needing gradients.
 | COBYLA / HEA depth=3 | −1.28456 | **9.66%** | 801 |
 | Adam / HEA depth=3 | +0.141 | stalled | 1000 |
 | ED exact | −1.42190399 | — | — |
+
+<img src="../figures/vqe_bar.png" alt="VQE vs ED bar chart" width="420">
 
 ---
 
@@ -107,6 +111,13 @@ directly without needing gradients.
 
 Site 2 shows anomalously low entropy (0.235 bits) consistent with specific frustrated geometry.
 Sites 0 and 1 form a near-perfect Bell pair (singlet on that bond).
+
+<table>
+<tr>
+<td><img src="../figures/entanglement_sublattice_mi.png" alt="Sublattice MI" width="100%"></td>
+<td><img src="../figures/entanglement_mi_matrix.png" alt="Pairwise MI matrix" width="100%"></td>
+</tr>
+</table>
 
 ---
 
@@ -143,6 +154,13 @@ Sites 0 and 1 form a near-perfect Bell pair (singlet on that bond).
 QAOA p≥2 recovers the global optimum, matching greedy exactly.
 p=1 (single layer) is insufficient for 12 qubits — as expected for shallow QAOA.
 
+<table>
+<tr>
+<td><img src="../figures/qaoa_material_ranking.png" alt="QAOA material ranking" width="100%"></td>
+<td><img src="../figures/qaoa_comparison.png" alt="QAOA vs baselines" width="100%"></td>
+</tr>
+</table>
+
 ---
 
 ## 05 — Scaling Analysis
@@ -163,6 +181,13 @@ p=1 (single layer) is insufficient for 12 qubits — as expected for shallow QAO
 - `figures/scaling_energy.png`
 - `figures/scaling_gradient_variance.png`
 - `data/vqe_scaling.csv`
+
+<table>
+<tr>
+<td><img src="../figures/scaling_energy.png" alt="VQE error and energy vs N" width="100%"></td>
+<td><img src="../figures/scaling_gradient_variance.png" alt="Gradient variance scaling" width="100%"></td>
+</tr>
+</table>
 
 ---
 

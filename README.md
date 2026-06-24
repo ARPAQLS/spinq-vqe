@@ -22,10 +22,10 @@ Part of [ARPA Quantum Logical Systems — QONDRA](https://github.com/arpaqls) &n
 
 `spinq-vqe` simulates the quantum many-body physics of **Mn₃Sn** — a Kagome antiferromagnet that demonstrated 40-picosecond spin-orbit torque switching (UTokyo, 2026). We use Variational Quantum Eigensolvers (VQE) to approximate its ground state and compare directly to spectroscopic data.
 
-Two workstreams:
+Two parallel research threads:
 
-- **A1 — VQE on the Kagome Heisenberg AFM**: ground-state energy, entanglement structure, barren plateau diagnostics, exact diagonalization benchmarks.
-- **B2 — SOC QAOA**: classical MLP surrogate on Materials Project spin Hall angle data, used as oracle for a QAOA composition optimizer.
+- **VQE on the Kagome lattice**: ground-state energy, entanglement structure, barren plateau diagnostics, exact diagonalization benchmarks.
+- **SOC material screening via QAOA**: classical MLP surrogate on spin Hall angle data, used as oracle for a QAOA composition optimizer.
 
 ## Structure
 
@@ -37,8 +37,8 @@ spinq-vqe/
 │   ├── vqe.py           # COBYLA (primary) + Adam (diagnostic) VQE runners
 │   ├── entanglement.py  # Von Neumann entropy, mutual information
 │   ├── utils.py         # Publication-quality plot helpers
-│   ├── surrogate.py     # MLP surrogate on MP θ_SH data  [B2]
-│   └── qaoa.py          # QAOA circuit + optimizer        [B2]
+│   ├── surrogate.py     # MLP surrogate for spin Hall angle prediction
+│   └── qaoa.py          # QAOA circuit + optimizer for material selection
 ├── notebooks/           # Executable research notebooks
 ├── figures/             # Generated plots
 ├── data/                # ED reference energies, VQE results, statevectors
@@ -57,7 +57,7 @@ pip install -e ".[dev]"
 ```
 
 Requires Python ≥ 3.11. Core: `pennylane ≥ 0.39`, `numpy`, `scipy`, `networkx`, `matplotlib`.  
-Optional: `pip install -e ".[data]"` adds `scikit-learn`, `mp-api`, `pandas` (for B2 workstream).
+Optional: `pip install -e ".[data]"` adds `scikit-learn`, `mp-api`, `pandas` (for SOC QAOA notebooks).
 
 ## Notebooks
 
@@ -71,7 +71,7 @@ Optional: `pip install -e ".[data]"` adds `scikit-learn`, `mp-api`, `pandas` (fo
 
 ## Key results
 
-### A1 — Ground-state energy (VQE vs Exact Diagonalisation)
+### Ground-state energy (VQE vs exact diagonalisation)
 
 | N | Method | E₀ (normalized) | Error vs ED | Notes |
 |---|--------|-----------------|-------------|-------|
@@ -83,7 +83,14 @@ Optional: `pip install -e ".[data]"` adds `scikit-learn`, `mp-api`, `pandas` (fo
 
 **Why COBYLA, not Adam:** The `|0⟩⊗N` initial state is a Z-basis eigenstate — all IsingXX/YY/ZZ gradients cancel to exactly zero by SU(2) symmetry. COBYLA uses function evaluations directly and is immune to this.
 
-### A1 — Entanglement structure (COBYLA VQE statevector, N=9)
+<table>
+<tr>
+<td><img src="figures/vqe_bar.png" alt="VQE vs ED" width="100%"></td>
+<td><img src="figures/scaling_energy.png" alt="Scaling" width="100%"></td>
+</tr>
+</table>
+
+### Entanglement structure (N=9 statevector)
 
 | Metric | Value | Interpretation |
 |--------|-------|----------------|
@@ -93,7 +100,9 @@ Optional: `pip install -e ".[data]"` adds `scikit-learn`, `mp-api`, `pandas` (fo
 | Sublattice I(A:C), I(B:C) | **2.235 bits** | C sublattice also correlated |
 | Mean pairwise MI | **0.227 bits** | Non-local correlations (spin liquid signature) |
 
-### B2 — SOC QAOA (N=12 materials, k=3 selection)
+<img src="figures/entanglement_sublattice_mi.png" alt="Sublattice mutual information" width="420">
+
+### SOC material selection via QAOA
 
 | Method | Total θ_SH | Selected | Notes |
 |--------|-----------|----------|-------|
@@ -101,6 +110,8 @@ Optional: `pip install -e ".[data]"` adds `scikit-learn`, `mp-api`, `pandas` (fo
 | **QAOA p=2** | **4.263** | **Mn₃Sn, CrTe₂, Bi₂Se₃** | Matches global optimum |
 | QAOA p=3 | 4.263 | Mn₃Sn, CrTe₂, Bi₂Se₃ | Confirms p=2 result |
 | Greedy (classical) | 4.263 | Bi₂Se₃, CrTe₂, Mn₃Sn | Optimal baseline |
+
+<img src="figures/qaoa_material_ranking.png" alt="QAOA material ranking" width="560">
 
 ## Docs
 

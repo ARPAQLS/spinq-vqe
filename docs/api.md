@@ -138,7 +138,7 @@ sub_MI = entanglement.sublattice_mutual_info_matrix(sv, parts, n_sites=9)
 
 ---
 
-## `spinq_vqe.surrogate` — B2
+## `spinq_vqe.surrogate`
 
 MLP surrogate for spin Hall angle (θ_SH) prediction. Used as oracle for `qaoa`.
 
@@ -166,7 +166,7 @@ theta_sh = surrogate.predict(sr, ds.records)
 
 ---
 
-## `spinq_vqe.qaoa` — B2
+## `spinq_vqe.qaoa`
 
 QAOA circuit and optimizer for k-from-N material selection.
 

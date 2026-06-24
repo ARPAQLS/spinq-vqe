@@ -16,13 +16,7 @@ We cannot fabricate this material. We *can* simulate its quantum many-body groun
 
 The Kagome lattice is a 2D network of **corner-sharing triangles** with three magnetic sublattices (A, B, C):
 
-```
-  C       C
- / \     / \
-A - B - A - B
-     \     /
-      C
-```
+<img src="../figures/kagome_lattice.png" alt="9-site Kagome lattice" width="380">
 
 Each triangle has three spins. The antiferromagnetic exchange wants adjacent spins to be antiparallel — but a triangle cannot be simultaneously antiferromagnetic on all three bonds. This is **geometric frustration**.
 
@@ -74,6 +68,8 @@ We compute the ground state energy via sparse matrix diagonalization (`scipy.spa
 |-----|-------------------|----------------------|
 | 9   | −1.42190399 | ≈ 0 (near-degenerate) |
 | 18  | −1.49962859 | 0.037 |
+
+<img src="../figures/ed_spectrum.png" alt="Low-energy spectrum N=9 and N=18" width="560">
 
 The near-zero gap at $N=9$ reflects the quantum spin liquid physics — the ground state manifold is highly degenerate in the thermodynamic limit.
 

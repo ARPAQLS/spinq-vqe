@@ -65,6 +65,10 @@ Layer l:
 - **Init:** `scale=1.0` (full random angles — at least breaks symmetry)
 - Known limitation: gradient variance decays as $O(4^{-N/2})$ at random init (McClean et al. 2018)
 
+<img src="../figures/vqe_convergence.png" alt="COBYLA convergence and Adam gradient variance (barren plateau)" width="620">
+
+*Left: COBYLA converges reliably across seeds. Right: Adam gradient variance measured at random parameter points — near zero (barren plateau confirmed).*
+
 ---
 
 ## MERA — Multi-scale Entanglement Renormalization Ansatz (simplified)
