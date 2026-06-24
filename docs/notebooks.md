@@ -110,30 +110,59 @@ Sites 0 and 1 form a near-perfect Bell pair (singlet on that bond).
 
 ---
 
-## 04 — SOC QAOA *(not started)*
+## 04 — SOC QAOA
 
-**File:** `04_soc_qaoa.ipynb`
+**File:** [`04_soc_qaoa.ipynb`](../notebooks/04_soc_qaoa.ipynb)  
+**Status:** ✅ Complete
 
-**Depends on:** `surrogate.py`, `qaoa.py` (both implemented)
+**What it does:**
+- Loads mock θ_SH dataset (12 spintronic materials, offline, no API key needed)
+- Trains MLP surrogate (`surrogate.train_surrogate`)
+- Scatter plot: actual vs predicted θ_SH
+- Formulates k=3 from N=12 selection as QUBO with constraint penalty λ=6
+- Runs QAOA at depth p=1, 2, 3 (COBYLA, 5 seeds × 300 evals per depth)
+- Classical baselines: greedy top-k and simulated annealing
+- Bar comparison and material ranking visualisation
 
-**What it will do:**
-- Load mock θ_SH dataset (or query Materials Project API with key)
-- Train MLP surrogate (`surrogate.train_surrogate`)
-- Formulate k-from-N heterostructure selection as QUBO
-- Run QAOA depth p=1..5 vs classical greedy + simulated annealing
-- Rank candidate compositions by predicted spin Hall angle
+**Key outputs:**
+- `figures/surrogate_predictions.png`
+- `figures/qaoa_comparison.png`
+- `figures/qaoa_convergence.png`
+- `figures/qaoa_material_ranking.png`
+- `data/qaoa_results.csv`
+
+**Results (k=3 from N=12 materials):**
+
+| Method | Total θ_SH | Selected |
+|--------|-----------|----------|
+| QAOA p=1 | 3.080 | W, Ta, Bi₂Se₃ (sub-optimal) |
+| **QAOA p=2** | **4.263** | **Mn₃Sn, CrTe₂, Bi₂Se₃** |
+| QAOA p=3 | 4.263 | Mn₃Sn, CrTe₂, Bi₂Se₃ |
+| Greedy | 4.263 | Bi₂Se₃, CrTe₂, Mn₃Sn |
+
+QAOA p≥2 recovers the global optimum, matching greedy exactly.
+p=1 (single layer) is insufficient for 12 qubits — as expected for shallow QAOA.
 
 ---
 
-## 05 — Scaling Analysis *(not started)*
+## 05 — Scaling Analysis
 
-**File:** `05_scaling_analysis.ipynb`
+**File:** [`05_scaling_analysis.ipynb`](../notebooks/05_scaling_analysis.ipynb)  
+**Status:** ✅ Complete
 
-**What it will do:**
-- VQE energy error vs system size (N=9, 18, 27)
-- COBYLA evaluations required for < 10% error at each N
-- Gradient variance scaling with N (Adam barren plateau characterization)
-- Estimate crossover where COBYLA becomes infeasible vs DMRG
+**What it does:**
+- Sparse ED for N=12 inline (4096-dim Hilbert space, ~seconds)
+- Loads N=9 COBYLA result from NB02 CSV (no rerun)
+- Runs COBYLA VQE at N=12 (HEA depth=2, 24 params, 3 seeds × 2000 evals)
+- VQE energy error vs N (9, 12) + ED reference at N=18
+- Adam gradient variance at N=9 and N=12 (10 seeds × 30 steps)
+- Box plot + log-scale plot of barren plateau scaling
+- Saves `data/vqe_scaling.csv`
+
+**Key outputs:**
+- `figures/scaling_energy.png`
+- `figures/scaling_gradient_variance.png`
+- `data/vqe_scaling.csv`
 
 ---
 

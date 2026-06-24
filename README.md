@@ -61,28 +61,29 @@ Optional: `pip install -e ".[data]"` adds `scikit-learn`, `mp-api`, `pandas` (fo
 
 ## Notebooks
 
-| # | Notebook | Status |
-|---|----------|--------|
-| 01 | [`01_kagome_hamiltonian.ipynb`](notebooks/01_kagome_hamiltonian.ipynb) | ✅ Complete — lattice, ED baseline, figures |
-| 02 | [`02_vqe_run.ipynb`](notebooks/02_vqe_run.ipynb) | ✅ Complete — COBYLA 9.66% error, Adam barren plateau confirmed |
-| 03 | [`03_entanglement.ipynb`](notebooks/03_entanglement.ipynb) | ✅ Complete — entropy profile, MI matrix, sublattice correlations |
-| 04 | `04_soc_qaoa.ipynb` | 🔲 Not started |
-| 05 | `05_scaling_analysis.ipynb` | 🔲 Not started |
+| # | Notebook | Notes |
+|---|----------|-------|
+| 01 | [`01_kagome_hamiltonian.ipynb`](notebooks/01_kagome_hamiltonian.ipynb) | lattice, ED baseline, figures |
+| 02 | [`02_vqe_run.ipynb`](notebooks/02_vqe_run.ipynb) | COBYLA 9.66% error, Adam barren plateau confirmed |
+| 03 | [`03_entanglement.ipynb`](notebooks/03_entanglement.ipynb) | entropy profile, MI matrix, sublattice correlations |
+| 04 | [`04_soc_qaoa.ipynb`](notebooks/04_soc_qaoa.ipynb) | surrogate MLP, QAOA p=1/2/3, material ranking |
+| 05 | [`05_scaling_analysis.ipynb`](notebooks/05_scaling_analysis.ipynb) | N=9/12/18 scaling, gradient variance, barren plateau |
 
 ## Key results
 
-### A1 — Ground-state energy (N=9 Kagome Heisenberg AFM)
+### A1 — Ground-state energy (VQE vs Exact Diagonalisation)
 
-| Method | E₀ (normalized) | Error vs ED | Notes |
-|--------|-----------------|-------------|-------|
-| Exact diag. (N=9) | −1.42190399 | — | Sparse ED, gap Δ ≈ 0 (degenerate) |
-| Exact diag. (N=18) | −1.49962859 | — | Spectral gap Δ = 0.037 |
-| **COBYLA / HEA depth=3** | **−1.28456** | **9.66%** | 27 params, 801 evaluations |
-| Adam / HEA depth=3 | +0.141 | — | Stalled at ferromagnetic saddle (barren plateau) |
+| N | Method | E₀ (normalized) | Error vs ED | Notes |
+|---|--------|-----------------|-------------|-------|
+| 9  | Exact diag. | −1.42190399 | — | Sparse ED, gap Δ ≈ 0 |
+| 9  | **COBYLA / HEA d=3** | **−1.28456** | **9.66%** | 27 params, 801 evals |
+| 9  | Adam / HEA d=3 | +0.141 | — | Barren plateau stall |
+| 12 | COBYLA / HEA d=2 | see NB05 | see NB05 | 24 params |
+| 18 | Exact diag. | −1.49962859 | — | Spectral gap Δ = 0.037 |
 
-**Why COBYLA, not Adam:** The `|0⟩⊗N` initial state is a Z-basis eigenstate — all IsingXX/YY/ZZ gradients cancel to exactly zero by SU(2) symmetry. Adam has no signal to follow. COBYLA uses function evaluations directly and is immune to this.
+**Why COBYLA, not Adam:** The `|0⟩⊗N` initial state is a Z-basis eigenstate — all IsingXX/YY/ZZ gradients cancel to exactly zero by SU(2) symmetry. COBYLA uses function evaluations directly and is immune to this.
 
-### A1 — Entanglement structure (COBYLA VQE statevector)
+### A1 — Entanglement structure (COBYLA VQE statevector, N=9)
 
 | Metric | Value | Interpretation |
 |--------|-------|----------------|
@@ -91,6 +92,15 @@ Optional: `pip install -e ".[data]"` adds `scikit-learn`, `mp-api`, `pandas` (fo
 | Sublattice I(A:B) | **3.689 bits** | Strong inter-sublattice correlations |
 | Sublattice I(A:C), I(B:C) | **2.235 bits** | C sublattice also correlated |
 | Mean pairwise MI | **0.227 bits** | Non-local correlations (spin liquid signature) |
+
+### B2 — SOC QAOA (N=12 materials, k=3 selection)
+
+| Method | Total θ_SH | Selected | Notes |
+|--------|-----------|----------|-------|
+| QAOA p=1 | 3.080 | W, Ta, Bi₂Se₃ | Shallow circuit — sub-optimal |
+| **QAOA p=2** | **4.263** | **Mn₃Sn, CrTe₂, Bi₂Se₃** | Matches global optimum |
+| QAOA p=3 | 4.263 | Mn₃Sn, CrTe₂, Bi₂Se₃ | Confirms p=2 result |
+| Greedy (classical) | 4.263 | Bi₂Se₃, CrTe₂, Mn₃Sn | Optimal baseline |
 
 ## Docs
 

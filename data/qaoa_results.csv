@@ -1,0 +1,6 @@
+method,k,N,total_theta_sh,selected_idx,selected_formulas,evals
+QAOA_p1,3,12,3.080442,"[2, 3, 11]","['W', 'Ta', 'Bi2Se3']",31
+QAOA_p2,3,12,4.262573,"[0, 9, 11]","['Mn3Sn', 'CrTe2', 'Bi2Se3']",300
+QAOA_p3,3,12,4.262573,"[0, 9, 11]","['Mn3Sn', 'CrTe2', 'Bi2Se3']",89
+Greedy,3,12,4.262573,"[11, 9, 0]","['Bi2Se3', 'CrTe2', 'Mn3Sn']",N/A
+SA,3,12,4.262573,"[np.int64(0), np.int64(9), np.int64(11)]","['Mn3Sn', 'CrTe2', 'Bi2Se3']",N/A

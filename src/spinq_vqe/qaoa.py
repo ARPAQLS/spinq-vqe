@@ -305,7 +305,7 @@ def run_qaoa(
 
     if verbose:
         print(f"\nSelected: {[int(i) for i in selected]}")
-        print(f"Total θ_SH: {selected_theta:.4f}  (greedy: {classical_greedy(theta_sh, k)['total']:.4f})")
+        print(f"Total theta_SH: {selected_theta:.4f}  (greedy: {classical_greedy(theta_sh, k)['total']:.4f})")
 
     return QAOAResult(
         energy=best_energy,
@@ -462,4 +462,4 @@ def qaoa_summary(result: QAOAResult, formulas: list[str] | None = None) -> None:
     if formulas:
         selected_formulas = [formulas[i] for i in result.selected_indices]
         print(f"Selected formulas: {selected_formulas}")
-    print(f"Total θ_SH:  {result.selected_theta_sh:.4f}")
+    print(f"Total theta_SH:  {result.selected_theta_sh:.4f}")

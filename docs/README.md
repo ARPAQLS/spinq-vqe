@@ -25,11 +25,13 @@
 
 **The ansatz:** HEA depth=3 (27 parameters) with COBYLA achieves **9.66% error** from exact diagonalization on the 9-site Kagome. HVA is available for physics-motivated experiments but showed zero gradient from `|0⟩⊗N`.
 
-**Current results (NB01–03 complete):**
-- ED ground state: E₀ = −1.42190399 (N=9)
-- COBYLA/HEA: E₀ = −1.28456 (9.66% error, 801 evaluations)
+**Current results (all 5 notebooks complete):**
+- ED ground state: E₀ = −1.42190399 (N=9), E₀ = −1.49963 (N=18)
+- COBYLA/HEA (N=9): E₀ = −1.28456 (9.66% error, 801 evaluations)
 - Mean single-site entropy: 0.9066 bits (near-maximal spin liquid signature)
 - Sublattice MI I(A:B): 3.689 bits
+- SOC QAOA (B2): p=2 recovers global optimum — Mn₃Sn + CrTe₂ + Bi₂Se₃ (θ_SH = 4.263)
+- Scaling (A1): see NB05 for N=12 VQE result and gradient variance analysis
 
 ---
 
