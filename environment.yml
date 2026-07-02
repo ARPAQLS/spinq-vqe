@@ -1,0 +1,19 @@
+name: spinq-vqe
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - scipy
+  - networkx
+  - matplotlib
+  - plotly
+  - jupyter
+  - jupyterlab
+  - pytest
+  - ruff
+  - scikit-learn
+  - pandas
+  - pip:
+      - -e ".[dev,data]"

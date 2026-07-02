@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: "spinq-vqe: Variational Quantum Simulation of Antiferromagnetic Hamiltonians"
+version: "0.1.0"
+date-released: 2026-06-01
+url: "https://github.com/ARPAQLS/spinq-vqe"
+repository-code: "https://github.com/ARPAQLS/spinq-vqe"
+license: MIT
+authors:
+  - name: "ARPA Quantum Logical Systems (QONDRA)"
+    email: "qondra@arpacorp.net"
+keywords:
+  - quantum computing
+  - variational quantum eigensolver
+  - VQE
+  - QAOA
+  - antiferromagnetic Hamiltonians
+  - kagome lattice
+  - spintronics
