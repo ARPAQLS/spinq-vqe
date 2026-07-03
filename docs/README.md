@@ -8,6 +8,7 @@
 
 | Document | What it covers |
 |----------|---------------|
+| [Research overview](../OVERVIEW.md) | Narrative, key results, scientific context, roadmap |
 | [Physics background](physics.md) | Kagome AFM, Mn₃Sn, frustration, the Hamiltonian |
 | [Ansatz guide](ansatze.md) | HVA, HEA, MERA — what they are, which to use, why |
 | [API reference](api.md) | Module-level reference for `spinq_vqe` |

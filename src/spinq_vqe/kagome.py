@@ -55,13 +55,12 @@ def kagome_graph(
 
     Supported configurations:
         n_cells=1  →  9 sites  (1×3 unit cell)
-        n_cells=2  →  18 sites (2×3 unit cells)  [NOT YET — see note]
+        n_cells=2  →  18 sites (2×3 unit cells)
         n_cells=3  →  24 sites
 
     .. note::
         Currently supports linear strip geometries (1D Kagome chain of unit
-        cells). 2D periodic tiling will be added in a future version once
-        the 1D strip is validated against QuSpin results.
+        cells). 2D periodic tiling is not yet implemented.
 
     Parameters
     ----------

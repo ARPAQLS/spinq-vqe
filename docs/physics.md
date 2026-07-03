@@ -56,7 +56,7 @@ The code builds a **1D Kagome strip** — a linear chain of corner-sharing trian
 | 3 | 9 | 11 |
 | 6 | 18 | 23 |
 
-**2D periodic Kagome tiling** (the true Mn₃Sn geometry) is planned for a future version once the 1D strip results are published.
+**2D periodic Kagome tiling** (the true Mn₃Sn geometry) is not yet implemented; the current code uses a 1D strip. See [What's next](../OVERVIEW.md#whats-next) in the research overview.
 
 ---
 

@@ -3,7 +3,7 @@ surrogate.py
 ------------
 Classical MLP surrogate for spin Hall angle (θ_SH) prediction.
 
-Workstream B2 — SOC QAOA oracle.
+Used as the oracle for the SOC QAOA material-selection optimizer.
 
 The surrogate is trained on Materials Project DFT data (anomalous Hall
 conductivity, resistivity, crystal symmetry descriptors) and used as a

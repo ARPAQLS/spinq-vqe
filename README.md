@@ -130,6 +130,7 @@ Six test modules covering all library functions. Runs in under 90 seconds on CPU
 
 ## Docs
 
+→ [`OVERVIEW.md`](OVERVIEW.md) — research narrative, key results, and literature context.  
 → [`docs/README.md`](docs/README.md) — physics background, ansatz guide, API reference, notebook guide.  
 → [`docs/testing.md`](docs/testing.md) — test suite guide, coverage map, extending tests.
 

@@ -3,8 +3,6 @@ qaoa.py
 -------
 QAOA circuit and optimizer for SOC material composition selection.
 
-Workstream B2 — SOC QAOA.
-
 Problem
 -------
 Given N candidate spintronic materials with predicted spin Hall angles θ_SH(i)

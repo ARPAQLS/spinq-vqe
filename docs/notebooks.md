@@ -20,8 +20,7 @@ All notebooks live in `notebooks/`. Run them in order — later notebooks depend
 
 ## 01 — Kagome Hamiltonian & Exact Diagonalization
 
-**File:** [`01_kagome_hamiltonian.ipynb`](../notebooks/01_kagome_hamiltonian.ipynb)  
-**Status:** ✅ Complete
+**File:** [`01_kagome_hamiltonian.ipynb`](../notebooks/01_kagome_hamiltonian.ipynb)
 
 **What it does:**
 - Builds the 9-site and 18-site Kagome lattice graphs
@@ -50,8 +49,6 @@ All notebooks live in `notebooks/`. Run them in order — later notebooks depend
 ## 02 — VQE Ground State
 
 **File:** [`02_vqe_run.ipynb`](../notebooks/02_vqe_run.ipynb)  
-**Status:** ✅ Complete
-
 **What it does:**
 - **COBYLA** (primary): 5 seeds × 5000 evaluations, HEA depth=3, random init `scale=1.0`
 - **Adam** (diagnostic): 2 seeds × 1000 steps — demonstrates the zero-gradient failure
@@ -83,8 +80,6 @@ directly without needing gradients.
 ## 03 — Entanglement Analysis
 
 **File:** [`03_entanglement.ipynb`](../notebooks/03_entanglement.ipynb)  
-**Status:** ✅ Complete
-
 **Depends on:** `data/statevector_hea_best.npy`
 
 **What it does:**
@@ -124,8 +119,6 @@ Sites 0 and 1 form a near-perfect Bell pair (singlet on that bond).
 ## 04 — SOC QAOA
 
 **File:** [`04_soc_qaoa.ipynb`](../notebooks/04_soc_qaoa.ipynb)  
-**Status:** ✅ Complete
-
 **What it does:**
 - Loads mock θ_SH dataset (12 spintronic materials, offline, no API key needed)
 - Trains MLP surrogate (`surrogate.train_surrogate`)
@@ -166,8 +159,6 @@ p=1 (single layer) is insufficient for 12 qubits — as expected for shallow QAO
 ## 05 — Scaling Analysis
 
 **File:** [`05_scaling_analysis.ipynb`](../notebooks/05_scaling_analysis.ipynb)  
-**Status:** ✅ Complete
-
 **What it does:**
 - Sparse ED for N=12 inline (4096-dim Hilbert space, ~seconds)
 - Loads N=9 COBYLA result from NB02 CSV (no rerun)
