@@ -8,6 +8,17 @@ and this project uses semantic versioning through the package version in
 
 ## [Unreleased]
 
+### Changed
+
+- Rewrote `OVERVIEW.md` as a public-facing research narrative with key results,
+  scientific context, roadmap, and cross-repo dependencies (#3).
+- Linked `OVERVIEW.md` from `README.md` and `docs/README.md`.
+- Removed internal planning language from `docs/notebooks.md` (status badges),
+  `docs/physics.md`, `src/spinq_vqe` module docstrings, and notebook headers
+  in NB04/NB05 (#3).
+- Updated `src/spinq_vqe/__init__.py` module descriptions for `surrogate` and
+  `qaoa` to behaviour-focused wording with no internal cluster codes (#4).
+
 ## [0.1.1] - 2026-07-03
 
 ### Added
