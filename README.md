@@ -59,6 +59,13 @@ pip install -e ".[dev]"
 Requires Python ≥ 3.11. Core: `pennylane ≥ 0.39`, `numpy`, `scipy`, `networkx`, `matplotlib`.  
 Optional: `pip install -e ".[data]"` adds `scikit-learn`, `mp-api`, `pandas` (for SOC QAOA notebooks).
 
+### Conda users
+
+```bash
+conda env create -f environment.yml
+conda activate spinq-vqe
+```
+
 ## Notebooks
 
 | # | Notebook | Notes |
