@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spinq-vqe"
-version = "0.1.0"
+version = "0.1.1"
 description = "Variational Quantum Simulation of Antiferromagnetic Hamiltonians"
 authors = [{ name = "ARPA Quantum Logical Systems (QONDRA)" }]
 license = { text = "MIT" }
