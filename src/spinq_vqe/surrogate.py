@@ -5,9 +5,10 @@ Classical MLP surrogate for spin Hall angle (θ_SH) prediction.
 
 Used as the oracle for the SOC QAOA material-selection optimizer.
 
-The surrogate is trained on Materials Project DFT data (anomalous Hall
-conductivity, resistivity, crystal symmetry descriptors) and used as a
-fast oracle for the QAOA composition optimizer in ``qaoa.py``.
+The surrogate is trained on Materials Project structure descriptors plus a
+committed, illustrative θ_SH target vector. The target values reproduce the
+NB04 workflow; they are not a row-wise set of verified measurements. See
+``data/theta_sh_sources.md`` for the provenance contract and audit.
 
 Pipeline
 --------
@@ -96,10 +97,10 @@ class MaterialRecord:
     """Anomalous Hall conductivity σ_AH (S/cm). From MP or literature."""
 
     theta_sh: float
-    """Spin Hall angle θ_SH (dimensionless). From literature or estimated."""
+    """Dimensionless θ_SH oracle target; provenance is tracked separately."""
 
     source: str = "unknown"
-    """Data source: 'mp_api', 'literature', or 'mock'."""
+    """Descriptor source: 'mp_api', 'csv', or 'mock'."""
 
 
 @dataclass
@@ -154,8 +155,9 @@ CSV_COLUMNS = [
     "ahc", "theta_sh", "theta_sh_source", "band_gap", "is_magnetic", "source",
 ]
 
-# 12 spintronic candidates: θ_SH and AHC from literature (MP has no θ_SH field).
-CURATED_LITERATURE: list[dict[str, Any]] = [
+# 12 reproducibility targets for NB04. These are illustrative oracle inputs,
+# not verified row-wise literature measurements (MP has no θ_SH field).
+CURATED_ORACLE: list[dict[str, Any]] = [
     {"formula": "Mn3Sn",   "theta_sh":  0.35, "ahc": 200.0},
     {"formula": "Pt",      "theta_sh":  0.08, "ahc":   0.0},
     {"formula": "W",       "theta_sh": -0.33, "ahc":   0.0},
@@ -175,7 +177,7 @@ _MOCK_DATA: list[dict] = [
     {"mp_id": "mp-mock", "formula": e["formula"], "crystal_system": "unknown",
      "z_max": 50, "n_elements": 2, "space_group": 1,
      "ahc": e["ahc"], "theta_sh": e["theta_sh"]}
-    for e in CURATED_LITERATURE
+    for e in CURATED_ORACLE
 ]
 
 _CRYSTAL_SYSTEM_MAP = {
@@ -196,7 +198,7 @@ def _crystal_system_str(symmetry: Any) -> str:
 def _record_to_csv_row(
     r: MaterialRecord,
     *,
-    theta_sh_source: str = "literature",
+    theta_sh_source: str = "illustrative_oracle",
     band_gap: float | None = None,
     is_magnetic: bool | None = None,
 ) -> dict:
@@ -246,7 +248,7 @@ def save_theta_sh_csv(
         for r, meta in zip(dataset.records, extras):
             writer.writerow(_record_to_csv_row(
                 r,
-                theta_sh_source=meta.get("theta_sh_source", "literature"),
+                theta_sh_source=meta.get("theta_sh_source", "illustrative_oracle"),
                 band_gap=meta.get("band_gap"),
                 is_magnetic=meta.get("is_magnetic"),
             ))
@@ -267,7 +269,7 @@ def load_theta_sh_csv(path: Path | str = DEFAULT_THETA_SH_CSV) -> SurrogateDatas
 
 def load_theta_sh_data(path: Path | str | None = None) -> SurrogateDataset:
     """
-    Load the spintronic θ_SH dataset (primary entry point for NB04).
+    Load the committed illustrative θ_SH oracle (primary entry point for NB04).
 
     Reads ``data/mp_theta_sh.csv``. Falls back to ``load_mock_data()`` with a
     warning if the CSV is missing (unit tests only).
@@ -288,10 +290,10 @@ def load_theta_sh_data(path: Path | str | None = None) -> SurrogateDataset:
 
 def load_mock_data() -> SurrogateDataset:
     """
-    Return the curated literature dataset (offline, no API key needed).
+    Return the illustrative NB04 oracle fallback (offline, no API key needed).
 
-    Includes 12 representative spintronic materials with known or estimated
-    θ_SH values. Useful for testing and as a training baseline.
+    Includes 12 representative spintronic materials with fixed target values.
+    Useful for tests and workflow reproduction, not as a measurement table.
 
     Returns
     -------
@@ -308,7 +310,7 @@ def fetch_curated_mp_dataset(api_key: str | None = None) -> tuple[SurrogateDatas
     """
     Fetch MP structure descriptors for the 12 curated spintronic materials.
 
-    θ_SH and AHC come from ``CURATED_LITERATURE`` (MP does not expose θ_SH).
+    θ_SH and AHC come from ``CURATED_ORACLE`` (MP does not expose θ_SH).
     For each formula, picks the lowest-energy-above-hull MP entry.
 
     Parameters
@@ -339,7 +341,7 @@ def fetch_curated_mp_dataset(api_key: str | None = None) -> tuple[SurrogateDatas
     extra_rows: list[dict] = []
 
     with MPRester(key) as mpr:
-        for entry in CURATED_LITERATURE:
+        for entry in CURATED_ORACLE:
             formula = entry["formula"]
             docs = mpr.materials.summary.search(
                 formula=formula,
@@ -370,7 +372,7 @@ def fetch_curated_mp_dataset(api_key: str | None = None) -> tuple[SurrogateDatas
                 source="mp_api",
             ))
             extra_rows.append({
-                "theta_sh_source": "literature",
+                "theta_sh_source": "illustrative_oracle",
                 "band_gap": best.band_gap,
                 "is_magnetic": best.is_magnetic,
             })
@@ -397,7 +399,7 @@ def load_mp_data(api_key: str | None = None) -> SurrogateDataset:
     Returns
     -------
     SurrogateDataset
-        Records with MP descriptors and literature θ_SH values.
+        Records with MP descriptors and illustrative θ_SH oracle targets.
 
     Raises
     ------

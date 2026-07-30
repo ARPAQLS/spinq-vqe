@@ -236,3 +236,9 @@ quantum run; p=3 does not improve the selection on this 12-material problem.
 ```
 
 Or open JupyterLab and run interactively.
+
+## NB04 provenance and scope
+
+NB04 operates on **k=3 from N=12** using predictions from an in-sample surrogate fitted to the committed illustrative oracle. The near-diagonal surrogate scatter is therefore a training diagnostic, not an out-of-sample validation result. The ranking figure highlights exactly three entries because `k=3` is imposed by the QUBO constraint.
+
+The committed targets are not asserted to be row-wise literature measurements. Consult [the provenance contract](../data/theta_sh_sources.md) and [machine-readable ledger](../data/theta_sh_provenance.csv). Results are limited to this fixed oracle and do not establish materials discovery, DFT-computed theta_SH, a global physical optimum, or quantum advantage.

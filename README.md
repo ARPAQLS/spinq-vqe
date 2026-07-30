@@ -30,6 +30,15 @@ Two parallel research threads:
 - **VQE on the Kagome lattice**: ground-state energy, entanglement structure, barren plateau diagnostics, exact diagonalization benchmarks.
 - **SOC material screening via QAOA**: classical MLP surrogate on spin Hall angle data, used as oracle for a QAOA composition optimizer.
 
+> [!IMPORTANT]
+> **NB04 scientific scope.** The committed `data/mp_theta_sh.csv` combines
+> Materials Project descriptors with a fixed, illustrative θ_SH oracle. Its 12
+> target values reproduce the `k=3` surrogate/QAOA workflow; they are not a
+> row-wise set of verified measurements. The notebook demonstrates an optimizer
+> comparison on this committed oracle, not materials discovery or quantum
+> advantage. See [`data/theta_sh_sources.md`](data/theta_sh_sources.md) and the
+> machine-readable [`data/theta_sh_provenance.csv`](data/theta_sh_provenance.csv).
+
 ## Structure
 
 ```

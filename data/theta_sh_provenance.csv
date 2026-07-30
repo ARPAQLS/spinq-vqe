@@ -1,0 +1,13 @@
+mp_id,csv_formula,canonical_formula,oracle_value,oracle_status,reported_value,uncertainty,measurement_method,sample_or_stack,temperature_K,sign_convention,primary_reference,comparability_note
+mp-22389,Mn3Sn,Mn3Sn,0.35,illustrative_oracle,0.053,0.024,spin absorption and inverse spin Hall,nanocrystalline Mn3Sn nanowire,300,as reported,10.1103/PhysRevB.99.184425,Oracle value does not match the cited primary measurement
+mp-2647022,Pt,Pt,0.08,illustrative_oracle,,,,,,,,"No row-level primary source identified; retained only to reproduce NB04"
+mp-11334,W,W,-0.33,illustrative_oracle,,,,,,,,"Phase thickness method and sign convention are unresolved; retained only to reproduce NB04"
+mp-42,Ta,Ta,-0.12,illustrative_oracle,,,,,,,,"Phase thickness method and sign convention are unresolved; retained only to reproduce NB04"
+mp-1186427,Pd,Pd,0.01,illustrative_oracle,,,,,,,,"No row-level primary source identified; retained only to reproduce NB04"
+mp-1008634,Au,Au,0.11,illustrative_oracle,,,,,,,,"No row-level primary source identified; retained only to reproduce NB04"
+mp-21171,MnGaCo2,Co2MnGa,0.20,illustrative_oracle,-0.19,0.04,electrical spin injection and inverse spin Hall,lateral spin valve,300,as reported,10.1103/PhysRevB.103.L041114,Oracle value has the opposite sign to the cited primary measurement
+mp-20883,Fe3Sn,Fe3Sn,0.25,illustrative_oracle,,,,,,,,"No row-level primary source identified; retained only to reproduce NB04"
+mp-2766475,Mn3Ir,Mn3Ir,0.18,illustrative_oracle,,,,,,,,"No row-level primary source identified; retained only to reproduce NB04"
+mp-685055,CrTe2,CrTe2,0.40,illustrative_oracle,,,,,,,,"No row-level primary source identified; retained only to reproduce NB04"
+mp-1221545,MnPt,MnPt,0.15,illustrative_oracle,,,,,,,,"No row-level primary source identified; retained only to reproduce NB04"
+mp-23164,Bi2Se3,Bi2Se3,3.50,illustrative_oracle,0.0093,0.0013,spin injection and inverse spin Hall,permalloy/Bi2Se3 thin-film device,300,as reported,10.1103/PhysRevB.90.094403,"The oracle value is not interchangeable with this method-specific measurement; MP row is an orthorhombic polymorph"

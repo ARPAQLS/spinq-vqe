@@ -136,3 +136,7 @@ Zenodo concept DOI: [10.5281/zenodo.21628505](https://doi.org/10.5281/zenodo.216
 ---
 
 *Last updated: 2026-07-27 · Part of the ARPA Spintronics QML Research Program*
+
+## SOC QAOA provenance boundary
+
+The SOC notebook is a workflow benchmark on a fixed illustrative oracle: 12 committed targets are fitted in-sample by the surrogate and used to select `k=3` candidates. The totals in the tables and figures are objective values on that oracle, not verified material constants. `data/theta_sh_sources.md` defines the status contract and `data/theta_sh_provenance.csv` binds every oracle row to either primary evidence or an explicit illustrative status. Replacing any target requires regenerating the surrogate, classical baselines, QAOA runs, tables, and figures together.

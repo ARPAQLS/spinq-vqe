@@ -175,3 +175,23 @@ class TestPredict:
         sr = train_surrogate(ds)
         preds = predict(sr, [ds.records[0]])
         assert len(preds) == 1
+def test_committed_theta_sh_provenance_contract():
+    """Every oracle row is explicitly sourced or explicitly illustrative."""
+    import csv
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    with (root / "data" / "mp_theta_sh.csv").open(newline="", encoding="utf-8") as f:
+        oracle_rows = list(csv.DictReader(f))
+    with (root / "data" / "theta_sh_provenance.csv").open(
+        newline="", encoding="utf-8"
+    ) as f:
+        provenance_rows = list(csv.DictReader(f))
+
+    allowed = {"illustrative_oracle", "sourced_primary"}
+    assert oracle_rows
+    assert all(row["theta_sh_source"] in allowed for row in oracle_rows)
+    assert all(row["oracle_status"] in allowed for row in provenance_rows)
+    assert {row["mp_id"] for row in oracle_rows} == {
+        row["mp_id"] for row in provenance_rows
+    }
