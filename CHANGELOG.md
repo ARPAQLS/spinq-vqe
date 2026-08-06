@@ -8,9 +8,11 @@ and this project uses semantic versioning through the package version in
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-08-06
+
 ### Added
 
-- DMRG comparison via TeNPy (`spinq_vqe.dmrg`, NB06, `data/dmrg_reference_energies.csv`) (#8).
+- DMRG comparison via TeNPy (`spinq_vqe.dmrg`, NB06, `data/dmrg_reference_energies.csv`) (#8, #30).
 - Optional dependency group `[dmrg]` with `physics-tenpy`.
 - Figures: `dmrg_chi_convergence.png`, `dmrg_vqe_comparison.png`, `dmrg_entanglement_profile.png`.
 - Script `scripts/run_dmrg_benchmark.py` to regenerate NB06 outputs and update `scaling_energy.png`.
@@ -22,10 +24,11 @@ and this project uses semantic versioning through the package version in
 ### Changed
 
 - NB05 scaling figure and VQE error metric now reference DMRG (not ED-only) where DMRG data exists.
-- README key results table re-expresses VQE error relative to DMRG.
+- README key results: VQE error relative to DMRG; hero figures use χ-convergence and entanglement profile.
 - Reclassified all 12 committed `theta_sh` targets as `illustrative_oracle`
   (not unqualified `literature`); aligned README, OVERVIEW, NB04, `surrogate.py`,
   and `docs/notebooks.md` with the same scientific boundary (#22, #29).
+- Package version bumped to 0.1.5.
 
 ## [0.1.4] - 2026-07-27
 

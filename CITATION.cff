@@ -6,8 +6,8 @@ message: >-
   separately once published.
 type: software
 title: "spinq-vqe: Variational Quantum Simulation of Antiferromagnetic Hamiltonians"
-version: "0.1.4"
-date-released: 2026-07-27
+version: "0.1.5"
+date-released: 2026-08-06
 url: "https://github.com/ARPAQLS/spinq-vqe"
 repository-code: "https://github.com/ARPAQLS/spinq-vqe"
 license: MIT
@@ -40,10 +40,12 @@ keywords:
   - spin Hall effect
   - entanglement
   - exact diagonalization
+  - DMRG
+  - TeNPy
   - hardware-efficient ansatz
   - MERA
 abstract: >-
   spinq-vqe provides PennyLane-based variational quantum eigensolver (VQE) and
   QAOA workflows for Kagome antiferromagnets and spin-orbit-torque material
-  screening, with exact-diagonalization benchmarks, entanglement diagnostics,
-  and reproducible notebooks.
+  screening, with exact-diagonalization and TeNPy DMRG benchmarks, entanglement
+  diagnostics, and reproducible notebooks.

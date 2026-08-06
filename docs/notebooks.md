@@ -256,11 +256,11 @@ Regenerate committed figures and CSV via `python scripts/run_dmrg_benchmark.py`.
 
 <table>
 <tr>
-<td><img src="../figures/dmrg_vqe_comparison.png" alt="ED vs DMRG vs VQE" width="100%"></td>
 <td><img src="../figures/dmrg_chi_convergence.png" alt="DMRG chi convergence" width="100%"></td>
+<td><img src="../figures/dmrg_entanglement_profile.png" alt="DMRG vs VQE entanglement" width="100%"></td>
 </tr>
 <tr>
-<td colspan="2"><img src="../figures/dmrg_entanglement_profile.png" alt="DMRG vs VQE entanglement" width="100%"></td>
+<td colspan="2"><img src="../figures/dmrg_vqe_comparison.png" alt="ED vs DMRG vs VQE" width="100%"></td>
 </tr>
 </table>
 

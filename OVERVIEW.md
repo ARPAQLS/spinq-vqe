@@ -12,7 +12,7 @@ In May 2026, the University of Tokyo (Nakatsuji Lab) demonstrated **40-picosecon
 
 We cannot fabricate this material in silico, but we *can* simulate its quantum many-body physics using **Variational Quantum Eigensolvers (VQE)** and **Quantum Approximate Optimization Algorithms (QAOA)** on a classical simulator — and compare results directly to exact diagonalization and spectroscopic benchmarks.
 
-`spinq-vqe` is the open-source Python package that implements this pipeline: lattice construction, variational ansätze, VQE runners, entanglement analysis, an MLP surrogate for spin Hall angle, and a QAOA material-selection optimizer. All five research notebooks are executed with published figures and reference data.
+`spinq-vqe` is the open-source Python package that implements this pipeline: lattice construction, variational ansätze, VQE runners, entanglement analysis, TeNPy DMRG references, an MLP surrogate for spin Hall angle, and a QAOA material-selection optimizer. All six research notebooks are executed with published figures and reference data.
 
 ---
 
@@ -28,7 +28,7 @@ H = J Σ_{<i,j>} S_i · S_j  +  D Σ_i (S_i^z)²  +  B Σ_i S_i^z
 
 The pipeline builds the lattice graph (NetworkX), maps spin operators to Pauli strings (PennyLane), and runs VQE with **COBYLA** (primary) or **Adam** (diagnostic). Results are benchmarked against sparse exact diagonalization.
 
-**Decisions made in this release:** HEA depth = 3 for N = 9; COBYLA over Adam (zero gradients from the `|0⟩⊗N` initial state); system sizes N = 9, 12, and 18 explored in the scaling notebook.
+**Decisions made in this release:** HEA depth = 3 for N = 9; COBYLA over Adam (zero gradients from the `|0⟩⊗N` initial state); system sizes N = 9, 12, 18, and 24 with DMRG as the primary classical reference beyond sparse ED.
 
 ### SOC material screening via QAOA
 
@@ -95,7 +95,7 @@ Full bibliography: [`REFERENCES.md`](REFERENCES.md) (50+ entries).
 | Component | Location | Description |
 |-----------|----------|-------------|
 | Python package | `src/spinq_vqe/` | `kagome`, `ansatz`, `vqe`, `entanglement`, `surrogate`, `qaoa`, `utils` |
-| Notebooks | `notebooks/01`–`05` | Lattice/ED, VQE, entanglement, SOC QAOA, scaling |
+| Notebooks | `notebooks/01`–`06` | Lattice/ED, VQE, entanglement, SOC QAOA, scaling, DMRG |
 | Test suite | `tests/` | Six modules, < 90 s on CPU |
 | Documentation | `docs/` | Physics, ansätze, API, notebooks, testing |
 | Data & figures | `data/`, `figures/` | ED energies, VQE/QAOA CSVs, publication plots |
@@ -129,7 +129,7 @@ The Kagome AFM Hamiltonian computed here is intended as the physical foundation 
 
 If you use this software, please cite using the metadata in [`CITATION.cff`](CITATION.cff):
 
-> Peilivanidis, V., & ARPA Quantum Logical Systems (QONDRA). (2026). *spinq-vqe: Variational Quantum Simulation of Antiferromagnetic Hamiltonians* (v0.1.4). https://doi.org/10.5281/zenodo.21628505
+> Peilivanidis, V., & ARPA Quantum Logical Systems (QONDRA). (2026). *spinq-vqe: Variational Quantum Simulation of Antiferromagnetic Hamiltonians* (v0.1.5). https://doi.org/10.5281/zenodo.21628505
 
 Zenodo concept DOI: [10.5281/zenodo.21628505](https://doi.org/10.5281/zenodo.21628505) (resolves to the latest archived version). Cite the software DOI for the code; cite any paper DOI separately when the manuscript is published.
 

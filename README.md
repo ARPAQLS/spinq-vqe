@@ -8,7 +8,7 @@ Part of [ARPA Quantum Logical Systems — QONDRA](https://github.com/arpaqls) &n
 
 <br>
 
-![Version](https://img.shields.io/badge/version-v0.1.4-B8B8E8?style=flat-square&labelColor=756F6A)
+![Version](https://img.shields.io/badge/version-v0.1.5-B8B8E8?style=flat-square&labelColor=756F6A)
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21628505-E8A598?style=flat-square&labelColor=756F6A)](https://doi.org/10.5281/zenodo.21628505)
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-C7E4CA?style=flat-square&labelColor=756F6A)
@@ -127,7 +127,8 @@ distributions are in `data/vqe_results.csv`, `data/vqe_seeds_n9.csv`, and
 <td><img src="figures/scaling_energy.png" alt="Scaling" width="100%"></td>
 </tr>
 <tr>
-<td colspan="2"><img src="figures/dmrg_vqe_comparison.png" alt="ED vs DMRG vs VQE" width="100%"></td>
+<td><img src="figures/dmrg_chi_convergence.png" alt="DMRG chi convergence N=18" width="100%"></td>
+<td><img src="figures/dmrg_entanglement_profile.png" alt="DMRG vs VQE entanglement" width="100%"></td>
 </tr>
 </table>
 
@@ -181,7 +182,7 @@ Key: Sachdev (1992), Yan/Huse/White (2011), Wiersema et al. (2020), Kandala et a
 
 If you use this software, please cite [`CITATION.cff`](CITATION.cff):
 
-> Peilivanidis, V., & ARPA Quantum Logical Systems (QONDRA). (2026). *spinq-vqe: Variational Quantum Simulation of Antiferromagnetic Hamiltonians* (v0.1.4). [https://doi.org/10.5281/zenodo.21628505](https://doi.org/10.5281/zenodo.21628505)
+> Peilivanidis, V., & ARPA Quantum Logical Systems (QONDRA). (2026). *spinq-vqe: Variational Quantum Simulation of Antiferromagnetic Hamiltonians* (v0.1.5). [https://doi.org/10.5281/zenodo.21628505](https://doi.org/10.5281/zenodo.21628505)
 
 Use the **concept DOI** above for the code artifact (always resolves to the latest archived version). Cite any related paper DOI separately once the manuscript is published.
 

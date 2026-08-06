@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spinq-vqe"
-version = "0.1.4"
+version = "0.1.5"
 description = "Variational Quantum Simulation of Antiferromagnetic Hamiltonians"
 authors = [
     { name = "Vladimiros Peilivanidis", email = "qondra@arpacorp.net" },
