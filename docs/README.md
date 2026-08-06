@@ -25,18 +25,18 @@
 
 **The optimizer:** Use **COBYLA** (`run_vqe_cobyla`) for this system — not Adam. The `|0⟩⊗N` initial state is a Z-basis eigenstate where all Ising-gate gradients cancel by SU(2) symmetry. COBYLA samples the energy directly and is immune to this zero-gradient problem.
 
-**The ansatz:** HEA depth=3 (27 parameters) with COBYLA achieves **9.66% error** (best seed)
-from exact diagonalization on the 9-site Kagome, with mean E₀ = −1.23572 ± 0.02853 across
+**The ansatz:** HEA depth=3 (27 parameters) with COBYLA achieves **9.66% error vs DMRG** (best seed)
+on the 9-site Kagome strip, with mean E₀ = −1.23572 ± 0.02853 across
 5 random initializations. HVA is available for physics-motivated experiments but showed zero
 gradient from `|0⟩⊗N`.
 
-**Current results (all 5 notebooks complete):**
-- ED ground state: E₀ = −1.42190399 (N=9), E₀ = −1.49963 (N=18)
-- COBYLA/HEA (N=9): best E₀ = −1.28456 (9.66% error); mean ± std = −1.23572 ± 0.02853 (5 seeds)
+**Current results (NB01–NB06):**
+- DMRG reference (TeNPy): E₀ = −1.4219 (N=9), −1.4804 (N=12), −1.4996 (N=18), −1.5094 (N=24)
+- COBYLA/HEA (N=9): best E₀ = −1.28456 (9.66% vs DMRG); mean ± std = −1.23572 ± 0.02853 (5 seeds)
 - Mean single-site entropy: 0.9066 bits (near-maximal spin liquid signature)
 - Sublattice MI I(A:B): 3.689 bits
 - SOC QAOA: greedy/SA reach oracle optimum (θ_SH ≈ 4.26); best QAOA is p=1/2 at 3.05
-- Scaling (NB05): N=12 VQE best error 16.33% (mean ± std = −1.21520 ± 0.02026), gradient variance barren plateau confirmed
+- Scaling (NB05): N=12 VQE best error 16.33% vs DMRG; gradient variance barren plateau confirmed
 
 ---
 

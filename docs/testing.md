@@ -36,7 +36,8 @@ tests/
 ├── test_vqe.py             # COBYLA and Adam VQE runners
 ├── test_entanglement.py    # Reduced density matrix + Von Neumann entropy
 ├── test_surrogate.py       # CSV + mock data, feature extraction, MLP training, prediction
-└── test_qaoa.py            # Cost/mixer Hamiltonians, QAOA run, classical greedy
+├── test_qaoa.py            # Cost/mixer Hamiltonians, QAOA run, classical greedy
+└── test_dmrg.py            # TeNPy Hamiltonian match + N=9 DMRG energy (optional dep)
 ```
 
 All tests use **N=3** (one Kagome unit cell, 3 sites) or **N=4** (QAOA) with minimal optimizer steps. The full suite runs in **under 90 seconds** on CPU.
@@ -53,6 +54,7 @@ All tests use **N=3** (one Kagome unit cell, 3 sites) or **N=4** (QAOA) with min
 | `entanglement.py` | `test_entanglement.py` | RDM shape/trace/hermiticity/PSD, entropy = 0 for product state, entropy = 1 for Bell pair, upper bound, base conversion |
 | `surrogate.py` | `test_surrogate.py` | CSV load (`mp_theta_sh.csv`), mock fallback, Mn₃Sn + real MP ID, feature matrix, training, prediction |
 | `qaoa.py` | `test_qaoa.py` | Cost/mixer Hamiltonian types, QAOA result structure, landscape grid, param history, classical greedy top-k |
+| `dmrg.py` | `test_dmrg.py` | TeNPy/PennyLane Hamiltonian match, N=9 energy vs ED (< 0.01%), CSV round-trip (skipped if `physics-tenpy` not installed) |
 
 ---
 
@@ -102,7 +104,8 @@ ruff check src/
 
 ## Known limitations
 
-- **No convergence test for VQE on real physics.** N=3 with 30 function evaluations is enough to verify the runner works, not to verify it reaches the true ground state. The notebooks (`NB02`, `NB05`) carry the physics-level validation.
+- **No convergence test for VQE on real physics.** N=3 with 30 function evaluations is enough to verify the runner works, not to verify it reaches the true ground state. The notebooks (`NB02`, `NB05`, `NB06`) carry the physics-level validation.
+- **DMRG tests require `physics-tenpy`.** `test_dmrg.py` uses `pytest.importorskip("tenpy")` and is skipped when the optional `[dmrg]` extra is not installed.
 - **No GPU tests.** All tests use `default.qubit` (CPU). `lightning.qubit` and JAX backends are exercised in notebooks only.
 - **QAOA k-constraint test is probabilistic.** `run_qaoa` selects k materials by sampling from the optimized circuit. With very few optimizer steps the selection is not guaranteed to satisfy the constraint. The test uses a tolerance-free `len(selected_indices) == k` check — if the QAOA rarely fails this, the implementation correctly decodes the argmax bitstring.
 
@@ -119,4 +122,4 @@ When adding a new module or extending an existing one:
 
 ---
 
-*Last updated: 2026-08-06 · spinq-vqe v0.1.4*
+*Last updated: 2026-08-06 · spinq-vqe v0.1.4 (NB06 DMRG)*

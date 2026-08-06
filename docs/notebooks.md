@@ -197,7 +197,7 @@ quantum run; p=3 does not improve the selection on this 12-material problem.
 - Sparse ED for N=12 inline (4096-dim Hilbert space, ~seconds)
 - Loads N=9 COBYLA statistics from NB02 CSV (`mean_energy`, `vqe_seeds_n9.csv`)
 - Runs COBYLA VQE at N=12 via `run_vqe_cobyla_multi_seed` (HEA depth=2, 3 seeds × 2000 evals)
-- VQE energy error vs N (9, 12) + ED reference at N=18
+- VQE energy error vs N (9, 12) relative to DMRG reference; ED reference at N=18
 - Box plot comparing seed energy distributions at N=9 vs N=12
 - Adam gradient variance at N=9 and N=12 (10 seeds × 30 steps)
 - Box plot + log-scale plot of barren plateau scaling
@@ -213,13 +213,54 @@ quantum run; p=3 does not improve the selection on this 12-material problem.
 
 | N | Seeds | Best E₀ | Error (best) | Notes |
 |---|-------|---------|--------------|-------|
-| 9 | 5 | −1.28456 | 9.66% | from NB02 CSV |
-| 12 | 3 | −1.23859 | 16.33% | `run_vqe_cobyla_multi_seed`, seeds [42, 7, 123] |
+| 9 | 5 | −1.28456 | 9.66% vs DMRG | from NB02 CSV |
+| 12 | 3 | −1.23859 | 16.33% vs DMRG | `run_vqe_cobyla_multi_seed`, seeds [42, 7, 123] |
 
 <table>
 <tr>
 <td><img src="../figures/scaling_energy.png" alt="VQE error and energy vs N" width="100%"></td>
 <td><img src="../figures/scaling_gradient_variance.png" alt="Gradient variance scaling" width="100%"></td>
+</tr>
+</table>
+
+---
+
+## 06 — DMRG Comparison (TeNPy)
+
+**File:** [`06_dmrg_comparison.ipynb`](../notebooks/06_dmrg_comparison.ipynb)  
+**Install:** `pip install -e ".[dmrg]"`  
+**What it does:**
+- Builds the Kagome strip MPO in TeNPy matching `kagome.heisenberg_kagome_hamiltonian`
+- Runs finite-chain DMRG at N = 9, 12, 18, 24 (beyond sparse ED for N > 18)
+- Validates TeNPy vs PennyLane ED Hamiltonian and N=9 ground-state energy (< 0.01% error)
+- χ convergence sweep at N=18 (N=9 is exact at χ≈4; residual plot is the certificate)
+- Bipartite entanglement entropy in bits: DMRG MPS vs VQE statevector from NB03 (when present)
+- Saves `data/dmrg_reference_energies.csv`
+
+**Key outputs:**
+- `figures/dmrg_chi_convergence.png`
+- `figures/dmrg_vqe_comparison.png`
+- `figures/dmrg_entanglement_profile.png`
+- `data/dmrg_reference_energies.csv`
+
+**Results:**
+
+| N | ED E₀ | DMRG E₀ | VQE E₀ | VQE err vs DMRG |
+|---|-------|---------|--------|-----------------|
+| 9 | −1.4219 | −1.4219 | −1.2846 | 9.66% |
+| 12 | — | −1.4804 | −1.2386 | 16.33% |
+| 18 | −1.4996 | −1.4996 | — | — |
+| 24 | — | −1.5094 | — | — |
+
+Regenerate committed figures and CSV via `python scripts/run_dmrg_benchmark.py`.
+
+<table>
+<tr>
+<td><img src="../figures/dmrg_vqe_comparison.png" alt="ED vs DMRG vs VQE" width="100%"></td>
+<td><img src="../figures/dmrg_chi_convergence.png" alt="DMRG chi convergence" width="100%"></td>
+</tr>
+<tr>
+<td colspan="2"><img src="../figures/dmrg_entanglement_profile.png" alt="DMRG vs VQE entanglement" width="100%"></td>
 </tr>
 </table>
 

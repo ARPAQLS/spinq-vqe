@@ -10,6 +10,10 @@ and this project uses semantic versioning through the package version in
 
 ### Added
 
+- DMRG comparison via TeNPy (`spinq_vqe.dmrg`, NB06, `data/dmrg_reference_energies.csv`) (#8).
+- Optional dependency group `[dmrg]` with `physics-tenpy`.
+- Figures: `dmrg_chi_convergence.png`, `dmrg_vqe_comparison.png`, `dmrg_entanglement_profile.png`.
+- Script `scripts/run_dmrg_benchmark.py` to regenerate NB06 outputs and update `scaling_energy.png`.
 - θ_SH provenance contract (`data/theta_sh_sources.md`) and row-level ledger
   (`data/theta_sh_provenance.csv`) for NB04 (#22, #29).
 - Contract test requiring every committed oracle row to be explicitly sourced or
@@ -17,6 +21,8 @@ and this project uses semantic versioning through the package version in
 
 ### Changed
 
+- NB05 scaling figure and VQE error metric now reference DMRG (not ED-only) where DMRG data exists.
+- README key results table re-expresses VQE error relative to DMRG.
 - Reclassified all 12 committed `theta_sh` targets as `illustrative_oracle`
   (not unqualified `literature`); aligned README, OVERVIEW, NB04, `surrogate.py`,
   and `docs/notebooks.md` with the same scientific boundary (#22, #29).

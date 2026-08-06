@@ -16,4 +16,4 @@ dependencies:
   - scikit-learn
   - pandas
   - pip:
-      - -e ".[dev,data]"
+      - -e ".[dev,data,dmrg]"

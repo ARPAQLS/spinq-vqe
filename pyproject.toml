@@ -47,7 +47,10 @@ dev = [
     "pytest",
     "ruff",
 ]
-all = ["spinq-vqe[ed,data,dev]"]
+dmrg = [
+    "physics-tenpy",
+]
+all = ["spinq-vqe[ed,data,dmrg,dev]"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

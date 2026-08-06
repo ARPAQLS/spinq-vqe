@@ -50,7 +50,8 @@ spinq-vqe/
 │   ├── entanglement.py  # Von Neumann entropy, mutual information
 │   ├── utils.py         # Publication-quality plot helpers
 │   ├── surrogate.py     # MLP surrogate for spin Hall angle prediction
-│   └── qaoa.py          # QAOA circuit + optimizer for material selection
+│   ├── qaoa.py          # QAOA circuit + optimizer for material selection
+│   └── dmrg.py          # TeNPy DMRG reference energies (NB06)
 ├── notebooks/           # Executable research notebooks
 ├── figures/             # Generated plots
 ├── data/                # ED/VQE/QAOA CSVs, mp_theta_sh.csv, statevectors
@@ -76,7 +77,8 @@ conda activate spinq-vqe
 ```
 
 Requires Python ≥ 3.11. Core: `pennylane ≥ 0.39`, `numpy`, `scipy`, `networkx`, `matplotlib`.  
-Optional: `pip install -e ".[data]"` adds `scikit-learn`, `mp-api`, `pandas` (for SOC QAOA notebooks).
+Optional: `pip install -e ".[data]"` adds `scikit-learn`, `mp-api`, `pandas` (for SOC QAOA notebooks).  
+Optional: `pip install -e ".[dmrg]"` adds `physics-tenpy` (for DMRG comparison, NB06).
 
 **SOC QAOA data (NB04):** uses committed `data/mp_theta_sh.csv` (no API key needed). To refresh from Materials Project:
 
@@ -95,17 +97,23 @@ python scripts/fetch_mp_theta_sh.py
 | 03 | [`03_entanglement.ipynb`](notebooks/03_entanglement.ipynb) | entropy profile, MI matrix, sublattice correlations |
 | 04 | [`04_soc_qaoa.ipynb`](notebooks/04_soc_qaoa.ipynb) | surrogate MLP, QAOA p=1/2/3, material ranking, landscape diagnostic |
 | 05 | [`05_scaling_analysis.ipynb`](notebooks/05_scaling_analysis.ipynb) | N=9/12/18 scaling, gradient variance, barren plateau |
+| 06 | [`06_dmrg_comparison.ipynb`](notebooks/06_dmrg_comparison.ipynb) | TeNPy DMRG vs ED/VQE, χ convergence, entanglement profile |
 
 ## Key results
 
-### Ground-state energy (VQE vs exact diagonalisation)
+### Ground-state energy (VQE vs DMRG)
 
-| N | Seeds | Mean E₀ | Std E₀ | Best E₀ | Error (best) | Notes |
-|---|-------|---------|--------|---------|--------------|-------|
+DMRG (TeNPy) is the primary classical reference for system sizes beyond sparse ED.
+VQE errors are quoted relative to DMRG E₀.
+
+| N | Seeds | Mean E₀ | Std E₀ | Best E₀ | Error vs DMRG | Notes |
+|---|-------|---------|--------|---------|---------------|-------|
 | 9 | 5 | −1.23572 | 0.02852 | **−1.28456** | **9.66%** | HEA d=3, 27 params |
 | 12 | 3 | −1.21520 | 0.02026 | −1.23859 | 16.33% | HEA d=2, 24 params |
-| 9 | — | — | — | −1.42190399 | — | Exact diag., gap Δ ≈ 0 |
-| 18 | — | — | — | −1.49962859 | — | Exact diag., gap Δ = 0.037 |
+| 9 | — | — | — | −1.42190399 | — | DMRG = ED, gap Δ ≈ 0 |
+| 12 | — | — | — | −1.48041803 | — | DMRG reference |
+| 18 | — | — | — | −1.49962859 | — | DMRG = ED, gap Δ = 0.037 |
+| 24 | — | — | — | −1.50936790 | — | DMRG only (beyond ED) |
 
 Adam / HEA d=3 at N=9 stalls at +0.141 (barren plateau). COBYLA mean ± std and per-seed
 distributions are in `data/vqe_results.csv`, `data/vqe_seeds_n9.csv`, and
@@ -117,6 +125,9 @@ distributions are in `data/vqe_results.csv`, `data/vqe_seeds_n9.csv`, and
 <tr>
 <td><img src="figures/vqe_bar.png" alt="VQE vs ED" width="100%"></td>
 <td><img src="figures/scaling_energy.png" alt="Scaling" width="100%"></td>
+</tr>
+<tr>
+<td colspan="2"><img src="figures/dmrg_vqe_comparison.png" alt="ED vs DMRG vs VQE" width="100%"></td>
 </tr>
 </table>
 

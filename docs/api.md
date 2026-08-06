@@ -239,6 +239,30 @@ result = qaoa.run_qaoa(theta_sh, k=3, p=2, n_seeds=5, verbose=True)
 
 ---
 
+## `spinq_vqe.dmrg`
+
+TeNPy DMRG reference energies for 1D Kagome strips (NB06). Requires `pip install -e ".[dmrg]"`.
+
+```python
+from spinq_vqe import dmrg
+```
+
+| Function | Signature | Returns |
+|----------|-----------|---------|
+| `build_kagome_dmrg_model` | `(n_cells, J=..., D=...)` | `KagomeStripDMRG` TeNPy model |
+| `validate_hamiltonian_against_pennylane` | `(n_cells, ...)` | `float` max matrix difference |
+| `run_dmrg` | `(n_cells, chi_max=400, ...)` | `DMRGResult` |
+| `run_dmrg_chi_sweep` | `(n_cells, chi_values, ...)` | `list[DMRGResult]` |
+| `save_dmrg_reference_csv` | `(results, path)` | `Path` |
+| `load_dmrg_reference_csv` | `(path)` | `dict[int, float]` keyed by `n_sites` |
+
+```python
+res = dmrg.run_dmrg(n_cells=3, chi_max=64)
+print(res.e0, res.chi)  # normalized E0/site, bond dimension used
+```
+
+---
+
 ## `spinq_vqe.utils`
 
 Publication-quality plot helpers.

@@ -13,6 +13,7 @@ vqe          : VQE runners — COBYLA (gradient-free, primary) + Adam (diagnosti
 entanglement : Von Neumann entropy and mutual information from VQE wavefunctions
 surrogate    : MLP surrogate for spin Hall angle prediction from materials descriptors
 qaoa         : QAOA circuit and optimizer for k-from-N spintronic material selection
+dmrg         : TeNPy DMRG reference energies for Kagome strips (NB06)
 utils        : Plotting helpers with consistent pastel palette
 """
 
@@ -31,5 +32,6 @@ __all__ = [
     "entanglement",
     "surrogate",
     "qaoa",
+    "dmrg",
     "utils",
 ]
