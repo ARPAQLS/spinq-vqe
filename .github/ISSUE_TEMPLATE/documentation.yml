@@ -1,0 +1,38 @@
+name: Documentation
+description: Suggest documentation improvements
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Help us improve the docs! Report missing information, unclear sections, or suggest new content.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Documentation Area
+      description: Where is the improvement needed?
+      options:
+        - README
+        - Notebook docs
+        - API / docstrings
+        - Installation guide
+        - CONTRIBUTING
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's missing or unclear?
+      description: Describe the documentation gap or confusion.
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested Improvement
+      description: What would you change or add?
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
