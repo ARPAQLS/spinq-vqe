@@ -1,0 +1,38 @@
+name: Notebook
+description: Suggest or discuss a new Jupyter notebook
+labels: ["enhancement", "documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Propose a new notebook or discuss improvements to existing ones (NB01–NB07).
+  - type: dropdown
+    id: type
+    attributes:
+      label: Notebook Type
+      description: Is this a new notebook or an improvement?
+      options:
+        - New notebook proposal
+        - Improvement to existing notebook
+        - Bug in notebook
+    validations:
+      required: true
+  - type: input
+    id: notebook_number
+    attributes:
+      label: Notebook Number (if applicable)
+      description: Which notebook? (NB01–NB07)
+      placeholder: "NB04"
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What should the notebook cover or what needs fixing?
+      placeholder: Describe the topic, methods, or expected outputs.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Relevant papers, data, or references.
