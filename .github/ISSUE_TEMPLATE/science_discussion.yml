@@ -1,0 +1,40 @@
+name: Science Discussion
+description: Discuss scientific methods, results, or physics questions
+labels: ["science"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A space to discuss VQE methods, entanglement metrics, Kagome lattice physics, QAOA optimization, and related science topics.
+  - type: dropdown
+    id: topic
+    attributes:
+      label: Topic Area
+      description: What scientific aspect are you discussing?
+      options:
+        - VQE ansatz design
+        - Entanglement metrics
+        - Kagome lattice physics
+        - QAOA optimization
+        - DMRG / TeNPy
+        - Surrogate models
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Relevant background, papers, or previous issues.
+  - type: textarea
+    id: discussion
+    attributes:
+      label: Questions / Discussion Points
+      description: What questions do you want to explore? What results or methods need clarification?
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Links to papers, notebooks, or data relevant to the discussion.
