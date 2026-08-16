@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Science Discussion
+    url: https://github.com/ARPAQLS/spinq-vqe/issues/new?template=science_discussion.yml
+    about: Discuss VQE methods, entanglement metrics, Kagome lattice physics, QAOA optimization
