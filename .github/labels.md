@@ -1,52 +1,61 @@
-# Label configuration for spinq-vqe
-# Pastel color scheme matching the project aesthetic
+# Issue Labels
 
-## Labels
+Pastel label palette for spinq-vqe, per issue #12. Create them once via
+GitHub -> Settings -> Labels, or with the `gh` commands below (`--force` makes them
+idempotent).
 
-| Name | Color | Description |
-|------|-------|-------------|
-| bug | E8A598 | Something isn't working |
-| enhancement | B8B8E8 | New feature or improvement |
-| good first issue | C7E4CA | Friendly for newcomers |
-| help wanted | F0D9CC | Extra attention needed |
-| science | D4C5F9 | Scientific content, methods, or results |
-| discussion | C5DFF9 | Open discussion topic |
-| documentation | F9E8C5 | Docs, README, comments |
-| testing | C5F9E8 | Tests, CI, validation |
-| performance | F9C5D4 | Speed, memory, optimization |
-| qaoa | E8C5F9 | QAOA-related work |
-| vqe | C5E8F9 | VQE-related work |
-| kagome | F9D4C5 | Kagome lattice physics |
-| entanglement | D4F9C5 | Entanglement metrics, entropy |
-| dmrg | F9C5E8 | DMRG / TeNPy methods |
-| nqs | C5F9D4 | Neural Quantum States |
+## Palette
 
-## Syncing labels to GitHub
+| Label | Color | Description |
+|-------|-------|-------------|
+| `bug` | `##EBD8DC` | Something is broken |
+| `science` | `##C7E4CA` | New scientific analysis or result |
+| `enhancement` | `##DBD3DC` | Improvement to existing functionality |
+| `documentation` | `##F4ECC8` | Docs fixes or additions |
+| `notebook` | `##F0D9CC` | Notebook-specific issue |
+| `data` | `##D4E8F4` | Data pipeline or reproducibility |
+| `test` | `##DCE8D4` | Test coverage |
+| `ci` | `##E4DCF0` | CI/CD workflows |
+| `chore` | `##EBEBEB` | Housekeeping, no functional change |
+| `needs-triage` | `##F5E6D0` | Needs initial assessment |
+| `needs-discussion` | `##F0ECD8` | Design decision required |
+| `good first issue` | `##C7E4CA` | Good entry point for new contributors |
+| `wontfix` | `##F0F0F0` | Out of scope or declined |
+| `blocked` | `##EBD8DC` | Waiting on another issue |
+| `kagome` | `##DBE8DC` | Kagome lattice / Hamiltonian specific |
+| `vqe` | `##D8E4EB` | VQE algorithm specific |
+| `qaoa` | `##E4D8EB` | QAOA / material selection specific |
+| `entanglement` | `##EBE8D8` | Entanglement analysis specific |
+| `dmrg` | `##D8EBE4` | DMRG comparison (TeNPy) |
+| `nqs` | `##E8EBD8` | Neural Quantum States (NetKet) |
+| `barren-plateau` | `##EBD8D8` | Barren plateau / gradient analysis |
+| `materials-project` | `##D8E8EB` | Materials Project API / data |
+| `publication` | `##F0D9CC` | Paper-related, pre-submission |
 
-These labels are not auto-created from this file. To sync them to the repo, run:
-
-```bash
-# Option 1: Using gh CLI (one-liner per label)
-gh label create bug --color E8A598 --description "Something isn't working"
-gh label create enhancement --color B8B8E8 --description "New feature or improvement"
-gh label create "good first issue" --color C7E4CA --description "Friendly for newcomers"
-gh label create "help wanted" --color F0D9CC --description "Extra attention needed"
-gh label create science --color D4C5F9 --description "Scientific content, methods, or results"
-gh label create discussion --color C5DFF9 --description "Open discussion topic"
-gh label create documentation --color F9E8C5 --description "Docs, README, comments"
-gh label create testing --color C5F9E8 --description "Tests, CI, validation"
-gh label create performance --color F9C5D4 --description "Speed, memory, optimization"
-gh label create qaoa --color E8C5F9 --description "QAOA-related work"
-gh label create vqe --color C5E8F9 --description "VQE-related work"
-gh label create kagome --color F9D4C5 --description "Kagome lattice physics"
-gh label create entanglement --color D4F9C5 --description "Entanglement metrics, entropy"
-gh label create dmrg --color F9C5E8 --description "DMRG / TeNPy methods"
-gh label create nqs --color C5F9D4 --description "Neural Quantum States"
-```
+## Create all
 
 ```bash
-# Option 2: Using the sync script (if added as a workflow)
-# See .github/workflows/sync-labels.yml for automated sync on push
+gh label create "bug" --color "#EBD8DC" --description "Something is broken" --force
+gh label create "science" --color "#C7E4CA" --description "New scientific analysis or result" --force
+gh label create "enhancement" --color "#DBD3DC" --description "Improvement to existing functionality" --force
+gh label create "documentation" --color "#F4ECC8" --description "Docs fixes or additions" --force
+gh label create "notebook" --color "#F0D9CC" --description "Notebook-specific issue" --force
+gh label create "data" --color "#D4E8F4" --description "Data pipeline or reproducibility" --force
+gh label create "test" --color "#DCE8D4" --description "Test coverage" --force
+gh label create "ci" --color "#E4DCF0" --description "CI/CD workflows" --force
+gh label create "chore" --color "#EBEBEB" --description "Housekeeping, no functional change" --force
+gh label create "needs-triage" --color "#F5E6D0" --description "Needs initial assessment" --force
+gh label create "needs-discussion" --color "#F0ECD8" --description "Design decision required" --force
+gh label create "good first issue" --color "#C7E4CA" --description "Good entry point for new contributors" --force
+gh label create "wontfix" --color "#F0F0F0" --description "Out of scope or declined" --force
+gh label create "blocked" --color "#EBD8DC" --description "Waiting on another issue" --force
+gh label create "kagome" --color "#DBE8DC" --description "Kagome lattice / Hamiltonian specific" --force
+gh label create "vqe" --color "#D8E4EB" --description "VQE algorithm specific" --force
+gh label create "qaoa" --color "#E4D8EB" --description "QAOA / material selection specific" --force
+gh label create "entanglement" --color "#EBE8D8" --description "Entanglement analysis specific" --force
+gh label create "dmrg" --color "#D8EBE4" --description "DMRG comparison (TeNPy)" --force
+gh label create "nqs" --color "#E8EBD8" --description "Neural Quantum States (NetKet)" --force
+gh label create "barren-plateau" --color "#EBD8D8" --description "Barren plateau / gradient analysis" --force
+gh label create "materials-project" --color "#D8E8EB" --description "Materials Project API / data" --force
+gh label create "publication" --color "#F0D9CC" --description "Paper-related, pre-submission" --force
 ```
-
-> **Note:** Labels referenced in issue templates (bug, enhancement, science, documentation, testing, qaoa, vqe, kagome, entanglement, dmrg, nqs) must exist before templates can auto-apply them.

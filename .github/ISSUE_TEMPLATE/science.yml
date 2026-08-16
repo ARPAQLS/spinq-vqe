@@ -1,0 +1,85 @@
+name: Science / Research
+description: New scientific analysis, comparison, result, or research direction.
+title: "science: "
+labels: ["science", "needs-discussion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for new scientific contributions: new benchmarks, method comparisons, physics experiments, or paper-relevant analyses.
+  - type: dropdown
+    id: category
+    attributes:
+      label: Research category
+      options:
+        - VQE — ground state energy
+        - VQE — ansatz design
+        - Entanglement analysis
+        - Barren plateau / gradient
+        - QAOA / material selection
+        - DMRG comparison
+        - NQS / NetKet comparison
+        - Scaling analysis
+        - Materials Project data
+        - Spin structure factor / INS comparison
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: system_size
+    attributes:
+      label: Target system size(s)
+      multiple: true
+      options:
+        - N=3 (1 cell, trivial)
+        - N=9 (3 cells, primary)
+        - N=12 (4 cells)
+        - N=18 (6 cells)
+        - N=24 (8 cells)
+        - N=27+ (large)
+        - All / N-independent
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Scientific motivation
+      description: What physics question does this address? Why does it matter for the paper?
+    validations:
+      required: true
+  - type: textarea
+    id: method
+    attributes:
+      label: Proposed approach
+      description: Which algorithm, library, or method will be used?
+    validations:
+      required: true
+  - type: textarea
+    id: expected_result
+    attributes:
+      label: Expected result or hypothesis
+      description: What do you expect to find? What would a successful result look like?
+    validations:
+      required: true
+  - type: dropdown
+    id: new_notebook
+    attributes:
+      label: Requires a new notebook?
+      options:
+        - "Yes — new NBxx file"
+        - "No — extends existing notebook"
+        - "No — code change only"
+    validations:
+      required: true
+  - type: input
+    id: reference
+    attributes:
+      label: Key reference (if any)
+      placeholder: "e.g. Yan et al. (2011) Science 332 — DMRG spin liquid"
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: This is not already covered by an open issue
+          required: true
+        - label: I have checked the relevant prior work in REFERENCES.md
+          required: true

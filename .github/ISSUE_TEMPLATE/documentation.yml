@@ -1,38 +1,46 @@
 name: Documentation
-description: Suggest documentation improvements
+description: Missing, incorrect, or unclear documentation.
+title: "docs: "
 labels: ["documentation"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Help us improve the docs! Report missing information, unclear sections, or suggest new content.
   - type: dropdown
-    id: area
+    id: doc
     attributes:
-      label: Documentation Area
-      description: Where is the improvement needed?
+      label: Which document?
       options:
-        - README
-        - Notebook docs
-        - API / docstrings
-        - Installation guide
-        - CONTRIBUTING
+        - README.md
+        - OVERVIEW.md
+        - docs/physics.md
+        - docs/ansatze.md
+        - docs/api.md
+        - docs/notebooks.md
+        - docs/README.md
+        - REFERENCES.md
+        - Docstring in source code
         - Other
     validations:
       required: true
-  - type: textarea
-    id: problem
+  - type: dropdown
+    id: issue_type
     attributes:
-      label: What's missing or unclear?
-      description: Describe the documentation gap or confusion.
+      label: Type
+      options:
+        - Incorrect information
+        - Missing content
+        - Unclear explanation
+        - Broken link
+        - Outdated (results have changed)
+        - Typo / grammar
     validations:
       required: true
   - type: textarea
-    id: suggestion
+    id: description
     attributes:
-      label: Suggested Improvement
-      description: What would you change or add?
-  - type: textarea
-    id: context
+      label: What needs to change?
+    validations:
+      required: true
+  - type: input
+    id: location
     attributes:
-      label: Additional Context
+      label: Exact location (file + line number if known)
+      placeholder: "e.g. docs/physics.md line 42"

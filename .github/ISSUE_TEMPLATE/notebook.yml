@@ -1,38 +1,54 @@
-name: Notebook
-description: Suggest or discuss a new Jupyter notebook
-labels: ["enhancement", "documentation"]
+name: Notebook Issue
+description: Bug, improvement, or new content for a specific notebook.
+title: "notebook: "
+labels: ["notebook"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Propose a new notebook or discuss improvements to existing ones (NB01–NB07).
   - type: dropdown
-    id: type
+    id: notebook
     attributes:
-      label: Notebook Type
-      description: Is this a new notebook or an improvement?
+      label: Which notebook?
       options:
-        - New notebook proposal
-        - Improvement to existing notebook
-        - Bug in notebook
+        - NB01 — Kagome Hamiltonian & ED
+        - NB02 — VQE Ground State
+        - NB03 — Entanglement Analysis
+        - NB04 — SOC QAOA
+        - NB05 — Scaling Analysis
+        - NB06 — DMRG Comparison (planned)
+        - NB07 — NQS Comparison (planned)
+        - New notebook
     validations:
       required: true
-  - type: input
-    id: notebook_number
+  - type: dropdown
+    id: issue_type
     attributes:
-      label: Notebook Number (if applicable)
-      description: Which notebook? (NB01–NB07)
-      placeholder: "NB04"
+      label: Type of issue
+      options:
+        - Bug — incorrect result or crash
+        - Figure — wrong, missing, or unclear plot
+        - Cell — incorrect or missing code cell
+        - Documentation — markdown explanation needs update
+        - New content — add analysis or section
+        - Reproducibility — notebook fails to execute
+    validations:
+      required: true
   - type: textarea
     id: description
     attributes:
       label: Description
-      description: What should the notebook cover or what needs fixing?
-      placeholder: Describe the topic, methods, or expected outputs.
+      description: What is wrong or what should be added?
     validations:
       required: true
   - type: textarea
-    id: context
+    id: expected
     attributes:
-      label: Additional Context
-      description: Relevant papers, data, or references.
+      label: Expected output or figure
+      description: What should the notebook produce?
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have run the notebook with the latest committed version
+          required: true
+        - label: The issue is not in the underlying spinq_vqe package (if so, use Bug Report)
+          required: true

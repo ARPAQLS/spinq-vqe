@@ -1,5 +1,8 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
 contact_links:
-  - name: Science Discussion
-    url: https://github.com/ARPAQLS/spinq-vqe/issues/new?template=science_discussion.yml
-    about: Discuss VQE methods, entanglement metrics, Kagome lattice physics, QAOA optimization
+  - name: QONDRA Program Documentation
+    url: https://github.com/arpaqls/spinq-vqe/blob/master/docs/README.md
+    about: Read the docs before opening an issue.
+  - name: ARPA Quantum Logical Systems
+    url: https://github.com/arpaqls
+    about: Visit the QONDRA org for related repos.

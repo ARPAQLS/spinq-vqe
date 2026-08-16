@@ -1,66 +1,79 @@
 name: Bug Report
-description: Report a bug or unexpected behavior
-labels: ["bug"]
+description: Something is broken in the code or notebooks.
+title: "bug: "
+labels: ["bug", "needs-triage"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for reporting a bug! Please fill out the sections below to help us reproduce and fix the issue.
-  - type: textarea
-    id: description
+        **Please confirm this is a reproducible bug, not a usage question.**
+  - type: dropdown
+    id: component
     attributes:
-      label: Description
-      description: A clear and concise description of the bug.
-      placeholder: What went wrong?
+      label: Affected component
+      description: Which module or notebook is affected?
+      options:
+        - kagome.py
+        - ansatz.py
+        - vqe.py
+        - entanglement.py
+        - surrogate.py
+        - qaoa.py
+        - utils.py
+        - NB01 — Kagome Hamiltonian
+        - NB02 — VQE Ground State
+        - NB03 — Entanglement
+        - NB04 — SOC QAOA
+        - NB05 — Scaling Analysis
+        - pyproject.toml / install
+        - Other
     validations:
       required: true
   - type: textarea
-    id: steps
+    id: description
     attributes:
-      label: Steps to Reproduce
-      description: Numbered steps to reproduce the behavior.
-      placeholder: |
-        1. Run `...`
-        2. Use `...`
-        3. Observe `...`
+      label: What happened?
+      description: Clear description of the bug. Include error message if any.
+      placeholder: "e.g. `hea_n_params(n_sites=9, depth=3)` returns 24 instead of 27"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Smallest code snippet that reproduces the issue.
+      render: python
     validations:
       required: true
   - type: textarea
     id: expected
     attributes:
-      label: Expected Behavior
-      description: What you expected to happen.
-    validations:
-      required: true
-  - type: textarea
-    id: actual
-    attributes:
-      label: Actual Behavior
-      description: What actually happened (include error messages if any).
+      label: Expected behaviour
     validations:
       required: true
   - type: input
-    id: python_version
+    id: version
+    attributes:
+      label: spinq-vqe version
+      placeholder: "e.g. 0.1.0 or dev"
+    validations:
+      required: true
+  - type: input
+    id: python
     attributes:
       label: Python version
-      placeholder: "3.11.4"
+      placeholder: "e.g. 3.11.4"
   - type: input
-    id: pennylane_version
+    id: pennylane
     attributes:
       label: PennyLane version
-      placeholder: "0.35.0"
-  - type: input
-    id: os
+      placeholder: "e.g. 0.39.0"
+  - type: checkboxes
+    id: checklist
     attributes:
-      label: OS
-      placeholder: "Ubuntu 22.04"
-  - type: input
-    id: spinq_version
-    attributes:
-      label: spinq-vqe version (commit/tag)
-      placeholder: "v0.1.5"
-  - type: textarea
-    id: context
-    attributes:
-      label: Additional Context
-      description: Any other details, screenshots, or logs.
+      label: Checklist
+      options:
+        - label: I have searched existing issues and this is not a duplicate
+          required: true
+        - label: I can reproduce this with the latest version
+          required: true
