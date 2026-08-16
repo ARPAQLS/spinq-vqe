@@ -27,8 +27,8 @@ References
 from __future__ import annotations
 
 import importlib.util
-from dataclasses import dataclass, field
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass, field
 
 import numpy as np
 import pennylane as qp

@@ -56,9 +56,9 @@ except ImportError:
     MP_API_AVAILABLE = False
 
 try:
+    from sklearn.model_selection import cross_val_score  # type: ignore
     from sklearn.neural_network import MLPRegressor  # type: ignore
     from sklearn.preprocessing import StandardScaler  # type: ignore
-    from sklearn.model_selection import cross_val_score  # type: ignore
     SKLEARN_AVAILABLE = True
 except ImportError:
     MLPRegressor = None  # type: ignore
