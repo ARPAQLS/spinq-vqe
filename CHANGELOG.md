@@ -8,15 +8,22 @@ and this project uses semantic versioning through the package version in
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-08-17
+
 ### Added
 
-- GitHub issue form templates (bug / science / notebook / docs / enhancement) and pastel label palette, synced by Actions from `.github/labels.yml` (#12).
-- GitHub Actions CI: `ruff` + `pytest` on Python 3.11/3.12 (`.[dev]` only; optional DMRG/NQS extras skipped) (#2).
-- Neural Quantum State comparison via NetKet (`spinq_vqe.nqs`, NB07, `data/method_comparison.csv`) (#9).
+- Neural Quantum State comparison via NetKet (`spinq_vqe.nqs`, NB07, `data/method_comparison.csv`) (#9, #35).
 - Optional dependency group `[nqs]` with `netket`.
 - Figures: `nqs_vmc_convergence.png`, `nqs_method_comparison.png`, `nqs_error_vs_ed.png`.
 - Script `scripts/run_nqs_benchmark.py` to regenerate NB07 outputs (append-only; does not modify DMRG figures).
 - Convergence histories as CSV (`data/nqs_*_history_n*.csv`) for notebook figure regeneration.
+- GitHub issue form templates (bug / science / notebook / docs / enhancement) and pastel label palette, synced by Actions from `.github/labels.yml` (#12, #34).
+- GitHub Actions CI: `ruff` + `pytest` on Python 3.11/3.12 (`.[dev]` only; optional DMRG/NQS extras skipped) (#2, #36).
+
+### Changed
+
+- README header omits the GitHub Actions status badge (CI still runs on push/PR).
+- Package version bumped to 0.1.6.
 
 ## [0.1.5] - 2026-08-06
 
