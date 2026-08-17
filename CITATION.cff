@@ -6,8 +6,8 @@ message: >-
   separately once published.
 type: software
 title: "spinq-vqe: Variational Quantum Simulation of Antiferromagnetic Hamiltonians"
-version: "0.1.5"
-date-released: 2026-08-06
+version: "0.1.6"
+date-released: 2026-08-17
 url: "https://github.com/ARPAQLS/spinq-vqe"
 repository-code: "https://github.com/ARPAQLS/spinq-vqe"
 license: MIT

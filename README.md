@@ -8,8 +8,7 @@ Part of [ARPA Quantum Logical Systems — QONDRA](https://github.com/arpaqls) &n
 
 <br>
 
-![Version](https://img.shields.io/badge/version-v0.1.5-B8B8E8?style=flat-square&labelColor=756F6A)
-[![CI](https://img.shields.io/github/actions/workflow/status/ARPAQLS/spinq-vqe/ci.yml?branch=master&style=flat-square&label=CI&labelColor=756F6A)](https://github.com/ARPAQLS/spinq-vqe/actions/workflows/ci.yml)
+![Version](https://img.shields.io/badge/version-v0.1.6-B8B8E8?style=flat-square&labelColor=756F6A)
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21628505-E8A598?style=flat-square&labelColor=756F6A)](https://doi.org/10.5281/zenodo.21628505)
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-C7E4CA?style=flat-square&labelColor=756F6A)
@@ -197,7 +196,7 @@ Key: Sachdev (1992), Yan/Huse/White (2011), Carleo/Troyer (2017), Wiersema et al
 
 If you use this software, please cite [`CITATION.cff`](CITATION.cff):
 
-> Peilivanidis, V., & ARPA Quantum Logical Systems (QONDRA). (2026). *spinq-vqe: Variational Quantum Simulation of Antiferromagnetic Hamiltonians* (v0.1.5). [https://doi.org/10.5281/zenodo.21628505](https://doi.org/10.5281/zenodo.21628505)
+> Peilivanidis, V., & ARPA Quantum Logical Systems (QONDRA). (2026). *spinq-vqe: Variational Quantum Simulation of Antiferromagnetic Hamiltonians* (v0.1.6). [https://doi.org/10.5281/zenodo.21628505](https://doi.org/10.5281/zenodo.21628505)
 
 Use the **concept DOI** above for the code artifact (always resolves to the latest archived version). Cite any related paper DOI separately once the manuscript is published.
 
