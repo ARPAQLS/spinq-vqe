@@ -9,6 +9,7 @@ Part of [ARPA Quantum Logical Systems — QONDRA](https://github.com/arpaqls) &n
 <br>
 
 ![Version](https://img.shields.io/badge/version-v0.1.5-B8B8E8?style=flat-square&labelColor=756F6A)
+[![CI](https://img.shields.io/github/actions/workflow/status/ARPAQLS/spinq-vqe/ci.yml?branch=master&style=flat-square&label=CI&labelColor=756F6A)](https://github.com/ARPAQLS/spinq-vqe/actions/workflows/ci.yml)
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21628505-E8A598?style=flat-square&labelColor=756F6A)](https://doi.org/10.5281/zenodo.21628505)
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-C7E4CA?style=flat-square&labelColor=756F6A)

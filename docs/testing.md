@@ -18,6 +18,8 @@ pip install -e ".[dev]"
 pytest tests/ -v
 ```
 
+GitHub Actions (`.github/workflows/ci.yml`) runs `ruff check src/` and `pytest tests/` on Python 3.11 and 3.12 for every push and pull request to `master`. Optional `[dmrg]` / `[nqs]` extras are not installed in CI, so those tests skip via `importorskip`.
+
 On Windows using the shared workspace venv at `d:\ARPA\OpenSource\Spintronics\.venv`:
 
 ```bash
@@ -125,4 +127,4 @@ When adding a new module or extending an existing one:
 
 ---
 
-*Last updated: 2026-08-15 · spinq-vqe (NB07 Unreleased)*
+*Last updated: 2026-08-17 · spinq-vqe (CI Unreleased)*
