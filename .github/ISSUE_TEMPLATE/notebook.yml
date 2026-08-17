@@ -1,0 +1,54 @@
+name: Notebook Issue
+description: Bug, improvement, or new content for a specific notebook.
+title: "notebook: "
+labels: ["notebook"]
+body:
+  - type: dropdown
+    id: notebook
+    attributes:
+      label: Which notebook?
+      options:
+        - NB01 — Kagome Hamiltonian & ED
+        - NB02 — VQE Ground State
+        - NB03 — Entanglement Analysis
+        - NB04 — SOC QAOA
+        - NB05 — Scaling Analysis
+        - NB06 — DMRG Comparison
+        - NB07 — NQS Comparison
+        - New notebook
+    validations:
+      required: true
+  - type: dropdown
+    id: issue_type
+    attributes:
+      label: Type of issue
+      options:
+        - Bug — incorrect result or crash
+        - Figure — wrong, missing, or unclear plot
+        - Cell — incorrect or missing code cell
+        - Documentation — markdown explanation needs update
+        - New content — add analysis or section
+        - Reproducibility — notebook fails to execute
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What is wrong or what should be added?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected output or figure
+      description: What should the notebook produce?
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have run the notebook with the latest committed version
+          required: true
+        - label: The issue is not in the underlying spinq_vqe package (if so, use Bug Report)
+          required: true

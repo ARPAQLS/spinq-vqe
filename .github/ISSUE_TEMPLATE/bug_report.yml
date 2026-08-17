@@ -1,0 +1,83 @@
+name: Bug Report
+description: Something is broken in the code or notebooks.
+title: "bug: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Please confirm this is a reproducible bug, not a usage question.**
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      description: Which module or notebook is affected?
+      options:
+        - kagome.py
+        - ansatz.py
+        - vqe.py
+        - entanglement.py
+        - surrogate.py
+        - qaoa.py
+        - dmrg.py
+        - nqs.py
+        - utils.py
+        - NB01 — Kagome Hamiltonian
+        - NB02 — VQE Ground State
+        - NB03 — Entanglement
+        - NB04 — SOC QAOA
+        - NB05 — Scaling Analysis
+        - NB06 — DMRG Comparison
+        - NB07 — NQS Comparison
+        - pyproject.toml / install
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Clear description of the bug. Include error message if any.
+      placeholder: "e.g. `hea_n_params(n_sites=9, depth=3)` returns 24 instead of 27"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Smallest code snippet that reproduces the issue.
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: spinq-vqe version
+      placeholder: "e.g. 0.1.0 or dev"
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: "e.g. 3.11.4"
+  - type: input
+    id: pennylane
+    attributes:
+      label: PennyLane version
+      placeholder: "e.g. 0.39.0"
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched existing issues and this is not a duplicate
+          required: true
+        - label: I can reproduce this with the latest version
+          required: true

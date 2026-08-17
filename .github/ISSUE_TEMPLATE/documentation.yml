@@ -1,0 +1,49 @@
+name: Documentation
+description: Missing, incorrect, or unclear documentation.
+title: "docs: "
+labels: ["documentation"]
+body:
+  - type: dropdown
+    id: doc
+    attributes:
+      label: Which document?
+      options:
+        - README.md
+        - OVERVIEW.md
+        - docs/physics.md
+        - docs/ansatze.md
+        - docs/api.md
+        - docs/notebooks.md
+        - docs/testing.md
+        - docs/README.md
+        - REFERENCES.md
+        - CHANGELOG.md
+        - CITATION.cff
+        - Docstring in source code
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: issue_type
+    attributes:
+      label: Type
+      options:
+        - Incorrect information
+        - Missing content
+        - Unclear explanation
+        - Broken link
+        - Outdated (results have changed)
+        - Typo / grammar
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What needs to change?
+    validations:
+      required: true
+  - type: input
+    id: location
+    attributes:
+      label: Exact location (file + line number if known)
+      placeholder: "e.g. docs/physics.md line 42"

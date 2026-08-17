@@ -10,6 +10,7 @@ and this project uses semantic versioning through the package version in
 
 ### Added
 
+- GitHub issue form templates (bug / science / notebook / docs / enhancement) and pastel label palette, synced by Actions from `.github/labels.yml` (#12).
 - GitHub Actions CI: `ruff` + `pytest` on Python 3.11/3.12 (`.[dev]` only; optional DMRG/NQS extras skipped) (#2).
 - Neural Quantum State comparison via NetKet (`spinq_vqe.nqs`, NB07, `data/method_comparison.csv`) (#9).
 - Optional dependency group `[nqs]` with `netket`.
