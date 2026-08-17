@@ -13,8 +13,8 @@ body:
         - NB03 — Entanglement Analysis
         - NB04 — SOC QAOA
         - NB05 — Scaling Analysis
-        - NB06 — DMRG Comparison (planned)
-        - NB07 — NQS Comparison (planned)
+        - NB06 — DMRG Comparison
+        - NB07 — NQS Comparison
         - New notebook
     validations:
       required: true

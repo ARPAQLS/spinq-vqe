@@ -14,8 +14,11 @@ body:
         - docs/ansatze.md
         - docs/api.md
         - docs/notebooks.md
+        - docs/testing.md
         - docs/README.md
         - REFERENCES.md
+        - CHANGELOG.md
+        - CITATION.cff
         - Docstring in source code
         - Other
     validations:

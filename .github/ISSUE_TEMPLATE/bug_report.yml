@@ -19,12 +19,16 @@ body:
         - entanglement.py
         - surrogate.py
         - qaoa.py
+        - dmrg.py
+        - nqs.py
         - utils.py
         - NB01 — Kagome Hamiltonian
         - NB02 — VQE Ground State
         - NB03 — Entanglement
         - NB04 — SOC QAOA
         - NB05 — Scaling Analysis
+        - NB06 — DMRG Comparison
+        - NB07 — NQS Comparison
         - pyproject.toml / install
         - Other
     validations:

@@ -10,6 +10,7 @@ and this project uses semantic versioning through the package version in
 
 ### Added
 
+- GitHub issue form templates (bug / science / notebook / docs / enhancement) and pastel label palette, synced by Actions from `.github/labels.yml` (#12).
 - Neural Quantum State comparison via NetKet (`spinq_vqe.nqs`, NB07, `data/method_comparison.csv`) (#9).
 - Optional dependency group `[nqs]` with `netket`.
 - Figures: `nqs_vmc_convergence.png`, `nqs_method_comparison.png`, `nqs_error_vs_ed.png`.
