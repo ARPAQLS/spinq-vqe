@@ -11,6 +11,7 @@ plot_entanglement_profile: Plot S_vN vs bipartition size
 plot_mutual_info_matrix  : Heatmap of sublattice mutual information
 plot_gradient_variance   : Barren plateau diagnostic plot
 plot_qaoa_landscape      : QAOA p=1 (γ, β) landscape + depth panel
+plot_qaoa_sweep          : λ / budget sensitivity (#21)
 plot_surrogate_holdout   : Train vs numbered hold-out parity plot (#20)
 """
 
@@ -394,7 +395,9 @@ def _plot_wrapped_qaoa_path(
     beta_period: float = np.pi,
 ) -> None:
     """Plot a COBYLA trajectory without spurious lines from angle wrapping."""
-    g, b = _wrap_qaoa_angles(gamma, beta, gamma_period=gamma_period, beta_period=beta_period)
+    g, b = _wrap_qaoa_angles(
+        gamma, beta, gamma_period=gamma_period, beta_period=beta_period
+    )
     if len(g) < 2:
         ax.scatter(b, g, color=color, s=12, alpha=alpha, label=label, zorder=5)
         return
@@ -402,7 +405,10 @@ def _plot_wrapped_qaoa_path(
     segments: list[np.ndarray] = []
     current = np.column_stack([b[:1], g[:1]])
     for i in range(1, len(g)):
-        if abs(g[i] - g[i - 1]) > gamma_period / 2 or abs(b[i] - b[i - 1]) > beta_period / 2:
+        if (
+            abs(g[i] - g[i - 1]) > gamma_period / 2
+            or abs(b[i] - b[i - 1]) > beta_period / 2
+        ):
             segments.append(current)
             current = np.column_stack([b[i : i + 1], g[i : i + 1]])
         else:
@@ -529,8 +535,12 @@ def plot_qaoa_landscape(
             edgecolor="white",
         )
         ax2.bar_label(bars, fmt="%.2f", fontsize=9, color="#444444")
-        ymin = min(totals + ([classical_theta_sh] if classical_theta_sh is not None else []))
-        ymax = max(totals + ([classical_theta_sh] if classical_theta_sh is not None else []))
+        ymin = min(
+            totals + ([classical_theta_sh] if classical_theta_sh is not None else [])
+        )
+        ymax = max(
+            totals + ([classical_theta_sh] if classical_theta_sh is not None else [])
+        )
         ax2.set_ylim(bottom=min(0.0, ymin) - 0.35, top=ymax * 1.08 + 0.05)
         if classical_theta_sh is not None:
             ax2.axhline(
@@ -559,14 +569,133 @@ def plot_qaoa_landscape(
 
 
 # ---------------------------------------------------------------------------
+# QAOA hyperparameter sweep (#21)
+# ---------------------------------------------------------------------------
+
+_QAOA_P_COLORS = {
+    1: "#7EB8D4",
+    2: "#E8A598",
+    3: "#A8D8B0",
+    4: "#B8B8E8",
+}
+
+
+def plot_qaoa_sweep(
+    rows: list[dict],
+    *,
+    greedy_theta_sh: float | None = None,
+    lam_slice_steps: int = 300,
+    budget_slice_lam: float = 6.0,
+    save_path: str | None = None,
+    title: str | None = None,
+) -> plt.Figure:
+    """
+    Two-panel sensitivity: θ_SH of the best-*cost* seed vs λ (fixed budget)
+    and vs COBYLA evaluations (fixed λ). Horizontal line is greedy on the
+    same oracle. This is the same scoring rule as published ``qaoa_results.csv``,
+    not the best θ_SH among seeds.
+    """
+    parsed: list[dict] = []
+    for raw in rows:
+        parsed.append(
+            {
+                "p": int(raw["p"]),
+                "lam": float(raw["lam"]),
+                "n_optimizer_steps": int(raw["n_optimizer_steps"]),
+                "best_theta_sh": float(raw["best_theta_sh"]),
+            }
+        )
+    if greedy_theta_sh is None and rows:
+        greedy_theta_sh = float(rows[0].get("greedy_theta_sh", "nan"))
+
+    fig, axes = plt.subplots(1, 2, figsize=(11.2, 4.6))
+
+    ax = axes[0]
+    lam_rows = [r for r in parsed if r["n_optimizer_steps"] == lam_slice_steps]
+    depths = sorted({r["p"] for r in lam_rows})
+    for p in depths:
+        sub = sorted((r for r in lam_rows if r["p"] == p), key=lambda r: r["lam"])
+        if not sub:
+            continue
+        ax.plot(
+            [r["lam"] for r in sub],
+            [r["best_theta_sh"] for r in sub],
+            marker="o",
+            color=_QAOA_P_COLORS.get(p, "#756F6A"),
+            label=f"QAOA p={p}",
+            lw=1.8,
+        )
+    if greedy_theta_sh is not None and np.isfinite(greedy_theta_sh):
+        ax.axhline(
+            greedy_theta_sh,
+            color="#C7E4CA",
+            linestyle="--",
+            lw=1.8,
+            label=f"greedy ({greedy_theta_sh:.2f})",
+        )
+    ax.set_xlabel("Constraint penalty λ")
+    ax.set_ylabel("θ_SH (best-cost seed)")
+    ax.set_title(f"vs λ  (budget = {lam_slice_steps} evals)", fontsize=12)
+    ax.legend(frameon=False, fontsize=8)
+
+    ax2 = axes[1]
+    bud_rows = [r for r in parsed if abs(r["lam"] - budget_slice_lam) < 1e-12]
+    depths2 = sorted({r["p"] for r in bud_rows})
+    for p in depths2:
+        sub = sorted(
+            (r for r in bud_rows if r["p"] == p),
+            key=lambda r: r["n_optimizer_steps"],
+        )
+        if not sub:
+            continue
+        ax2.plot(
+            [r["n_optimizer_steps"] for r in sub],
+            [r["best_theta_sh"] for r in sub],
+            marker="D",
+            color=_QAOA_P_COLORS.get(p, "#756F6A"),
+            label=f"QAOA p={p}",
+            lw=1.8,
+        )
+    if greedy_theta_sh is not None and np.isfinite(greedy_theta_sh):
+        ax2.axhline(
+            greedy_theta_sh,
+            color="#C7E4CA",
+            linestyle="--",
+            lw=1.8,
+            label=f"greedy ({greedy_theta_sh:.2f})",
+        )
+    ax2.set_xlabel("COBYLA evaluations per seed")
+    ax2.set_ylabel("θ_SH (best-cost seed)")
+    ax2.set_title(f"vs budget  (λ = {budget_slice_lam:g})", fontsize=12)
+    ax2.legend(frameon=False, fontsize=8)
+
+    fig.suptitle(
+        title or "QAOA sensitivity on the frozen N=12 pool oracle",
+        fontsize=13,
+        y=1.02,
+    )
+    fig.tight_layout()
+    if save_path:
+        fig.savefig(save_path, bbox_inches="tight", dpi=150)
+    return fig
+
+
+# ---------------------------------------------------------------------------
 # Surrogate hold-out parity (#20)
 # ---------------------------------------------------------------------------
 
 # Distinct colors for ≤10 hold-out markers (matched to table rows).
 _HOLDOUT_COLORS = [
-    "#4C78A8", "#F58518", "#54A24B", "#E45756",
-    "#B279A2", "#72B7B2", "#EECA3B", "#9D755D",
-    "#BAB0AC", "#FF9DA6",
+    "#4C78A8",
+    "#F58518",
+    "#54A24B",
+    "#E45756",
+    "#B279A2",
+    "#72B7B2",
+    "#EECA3B",
+    "#9D755D",
+    "#BAB0AC",
+    "#FF9DA6",
 ]
 
 
@@ -577,9 +706,16 @@ def _holdout_label_offsets(
 ) -> list[tuple[float, float]]:
     """Fan annotation offsets (points) so numbered labels do not stack."""
     dirs = [
-        (16, 12), (16, -12), (-18, 12), (-18, -12),
-        (22, 2), (-22, 2), (4, 20), (4, -20),
-        (26, 14), (-26, -14),
+        (16, 12),
+        (16, -12),
+        (-18, 12),
+        (-18, -12),
+        (22, 2),
+        (-22, 2),
+        (4, 20),
+        (4, -20),
+        (26, 14),
+        (-26, -14),
     ]
     px = 90.0 / max(lim_span, 1e-6)
     placed: list[tuple[float, float]] = []
@@ -650,8 +786,14 @@ def plot_surrogate_holdout(
 
     for x, y, color in zip(xs, ys, colors):
         ax.scatter(
-            [x], [y], s=110, c=color, marker="D",
-            edgecolors="white", linewidths=0.7, zorder=5,
+            [x],
+            [y],
+            s=110,
+            c=color,
+            marker="D",
+            edgecolors="white",
+            linewidths=0.7,
+            zorder=5,
         )
 
     all_x = np.concatenate([train_true, hold_true, train_pred, hold_pred])
@@ -688,16 +830,33 @@ def plot_surrogate_holdout(
     ax.set_title(title, fontsize=13, pad=10)
     handles = [
         Line2D(
-            [0], [0], marker="o", color="none", markerfacecolor="#D9D4DC",
-            markeredgecolor="white", markersize=9,
+            [0],
+            [0],
+            marker="o",
+            color="none",
+            markerfacecolor="#D9D4DC",
+            markeredgecolor="white",
+            markersize=9,
             label=f"Train (n={len(train_true)}) — used to fit the model",
         ),
         Line2D(
-            [0], [0], marker="D", color="none", markerfacecolor="#4C78A8",
-            markeredgecolor="white", markersize=9,
+            [0],
+            [0],
+            marker="D",
+            color="none",
+            markerfacecolor="#4C78A8",
+            markeredgecolor="white",
+            markersize=9,
             label=f"Hold-out (n={len(hold_true)}) — numbered, see table",
         ),
-        Line2D([0], [0], color="#756F6A", linestyle="--", lw=1.2, label="Perfect prediction"),
+        Line2D(
+            [0],
+            [0],
+            color="#756F6A",
+            linestyle="--",
+            lw=1.2,
+            label="Perfect prediction",
+        ),
     ]
     ax.legend(handles=handles, frameon=False, loc="upper left", fontsize=8.5)
 
@@ -707,13 +866,15 @@ def plot_surrogate_holdout(
     col_labels = ["#", "formula", "oracle", "pred", "|err|"]
     cell_text = []
     for k, idx in enumerate(order, start=1):
-        cell_text.append([
-            str(k),
-            formulas[k - 1],
-            f"{hold_true[idx]:+.2f}",
-            f"{hold_pred[idx]:+.2f}",
-            f"{hold_err[idx]:.2f}",
-        ])
+        cell_text.append(
+            [
+                str(k),
+                formulas[k - 1],
+                f"{hold_true[idx]:+.2f}",
+                f"{hold_pred[idx]:+.2f}",
+                f"{hold_err[idx]:.2f}",
+            ]
+        )
     table = ax_tab.table(
         cellText=cell_text,
         colLabels=col_labels,

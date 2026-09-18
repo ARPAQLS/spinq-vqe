@@ -15,6 +15,13 @@ and this project uses semantic versioning through the package version in
   (#20).
 - `scripts/evaluate_surrogate.py` and `utils.plot_surrogate_holdout` to regenerate
   the numbered train/hold-out figure.
+- QAOA hyperparameter sweep over λ, COBYLA budget, and depth on the frozen
+  N=12 in-sample pool oracle, with committed `data/qaoa_sweep.csv`,
+  `data/qaoa_sweep_seeds.csv`, and `figures/qaoa_sweep.png` (#21). Best cell:
+  θ_SH = 3.570 at p=1, λ=5 (greedy still 4.259). Published `qaoa_results.csv`
+  unchanged.
+- `scripts/run_qaoa_sweep.py` and `utils.plot_qaoa_sweep` (does not modify
+  published `data/qaoa_results.csv`).
 - Phase-A expansion of `data/mp_theta_sh.csv` to **32** illustrative spintronic
   materials with MP descriptors; `data/README.md` and row-level provenance for
   every new row (#19).
@@ -26,6 +33,9 @@ and this project uses semantic versioning through the package version in
 - NB04 reports train / CV / hold-out RMSE; QAOA pool keeps `oracle=in_sample` for
   published continuity and prints pool LOOCV RMSE alongside (#20).
 - `[dev]` extra includes `scikit-learn` so CI runs the MLP hold-out / CV tests (#20).
+- NB04 loads a λ / budget / depth sweep next to the published single-config table
+  so “classical still wins” is not a one-shot COBYLA setting (#21). Best sweep
+  cell remains below greedy (3.570 vs 4.259).
 - NB04 scope docs: full CSV for surrogate diversity; QAOA/greedy/SA still k=3 from
   the fixed 12-material pool. Provenance contract deliberately keeps
   `illustrative_oracle` (not a generic `literature` tag).

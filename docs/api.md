@@ -233,7 +233,12 @@ from spinq_vqe import qaoa
 |----------|-------------|
 | `build_cost_hamiltonian(theta_sh, k, lam)` | QUBO cost Hamiltonian |
 | `build_mixer_hamiltonian(n_materials)` | Transverse-field X mixer |
-| `run_qaoa(theta_sh, k, p, ...)` | Full QAOA optimization (COBYLA) |
+| `run_qaoa(theta_sh, k, p, ...)` | Full QAOA optimization (COBYLA); stores per-seed θ_SH |
+| `run_qaoa_sweep(theta_sh, k, ...)` | λ / budget / depth grid on a frozen oracle (#21) |
+| `save_qaoa_sweep` / `load_qaoa_sweep` | Persist / reload sweep CSVs |
+| `sweep_best_row(rows)` | Highest `best_theta_sh` (best-cost seed) in a loaded sweep |
+| `is_published_qaoa_config(...)` | True when a cell matches committed NB04 QAOA settings |
+| `oracle_id(theta_sh)` | Short fingerprint of the frozen θ_SH vector |
 | `evaluate_qaoa_cost(theta_sh, params, k, p, lam)` | Single cost evaluation |
 | `qaoa_landscape_grid(theta_sh, k, lam, n_gamma, n_beta)` | Sample p=1 (γ, β) landscape |
 | `find_landscape_minima(landscape)` | Coarse local minima on a landscape grid |
@@ -244,9 +249,16 @@ from spinq_vqe import qaoa
 ```python
 pool = surrogate.qaoa_pool_dataset(ds)
 theta_sh, _ = surrogate.predict_oracle(pool, mode="in_sample")
-result = qaoa.run_qaoa(theta_sh, k=3, p=2, n_seeds=5, verbose=True)
+result = qaoa.run_qaoa(theta_sh, k=3, p=2, lam=6.0, n_seeds=5, step_size=0.3, verbose=True)
 # result.selected_indices → best 3 materials
 # result.selected_theta_sh → total θ_SH
+# result.mean_theta_sh / std_theta_sh → seed spread
+```
+
+Sweep (does not overwrite `data/qaoa_results.csv`):
+
+```bash
+python scripts/run_qaoa_sweep.py
 ```
 
 ---
@@ -316,6 +328,7 @@ from spinq_vqe import utils
 | `plot_mutual_info_matrix(matrix, ...)` | Sublattice MI heatmap |
 | `plot_gradient_variance(results, ...)` | Barren plateau diagnostic |
 | `plot_qaoa_landscape(gamma, beta, energies, ...)` | NB04 landscape + θ_SH depth panel |
+| `plot_qaoa_sweep(rows, ...)` | λ / budget sensitivity; y-axis is θ_SH of the best-cost seed |
 | `plot_surrogate_holdout(...)` | Train vs numbered hold-out parity plot + matched table |
 
 All plots use a consistent soft pastel palette (`SUBLATTICE_COLORS`, `ANSATZ_COLORS`).

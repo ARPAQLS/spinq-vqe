@@ -36,7 +36,7 @@ gradient from `|0⟩⊗N`.
 - COBYLA/HEA (N=9): best E₀ = −1.28456 (9.66% vs DMRG); mean ± std = −1.23572 ± 0.02853 (5 seeds)
 - Mean single-site entropy: 0.9066 bits (near-maximal spin liquid signature)
 - Sublattice MI I(A:B): 3.689 bits
-- SOC QAOA: greedy/SA reach oracle optimum (θ_SH ≈ 4.26); best QAOA is p=1/2 at 3.05
+- SOC QAOA: greedy/SA reach oracle optimum (θ_SH ≈ 4.26); best default QAOA is p=1/2 at 3.05; sweep best is 3.57 (p=1, λ=5) in `data/qaoa_sweep.csv`
 - SOC surrogate: train RMSE 0.116 vs hold-out RMSE 1.20 on 7 held-out formulas (`data/surrogate_metrics.csv`)
 - Scaling (NB05): N=12 VQE best error 16.33% vs DMRG; gradient variance barren plateau confirmed
 
