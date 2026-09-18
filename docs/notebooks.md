@@ -129,9 +129,10 @@ Sites 0 and 1 form a near-perfect Bell pair (singlet on that bond).
 **File:** [`04_soc_qaoa.ipynb`](../notebooks/04_soc_qaoa.ipynb)  
 **What it does:**
 - Loads θ_SH dataset from `data/mp_theta_sh.csv` (**32** Phase-A spintronic materials; MP descriptors + illustrative oracle targets)
-- Trains MLP surrogate on the **full** corpus (`surrogate.train_surrogate`) for diversity / CV-ready diagnostics
-- Fits a separate **N=12 pool** surrogate for QAOA weights (`surrogate.qaoa_pool_dataset`) so Hilbert space stays `2^12`
-- Scatter plot: actual vs predicted θ_SH (full corpus)
+- Trains MLP with **train / CV / hold-out** diagnostics (`hold_out_frac=0.2`, k-fold CV via leakage-free Pipeline)
+- Fits QAOA weights via `predict_oracle(..., mode='in_sample')` on the **N=12** pool; prints pool LOOCV RMSE for honesty
+- Scatter plot: numbered hold-out diamonds matched to a side table (`figures/surrogate_predictions.png`)
+- Persists `data/surrogate_metrics.csv`
 - Formulates k=3 from N=12 pool selection as QUBO with constraint penalty λ=6
 - Runs QAOA at depth p=1, 2, 3 (COBYLA, 5 seeds × 300 evals per depth)
 - **p=1 (γ, β) cost landscape** with COBYLA path; right panel plots total θ_SH vs depth
@@ -139,8 +140,12 @@ Sites 0 and 1 form a near-perfect Bell pair (singlet on that bond).
 - Classical baselines: greedy top-k and simulated annealing
 - Bar comparison and material ranking visualisation
 
+**Regenerate surrogate figure + metrics (no API key, no full QAOA rerun):**
+`python scripts/evaluate_surrogate.py`
+
 **Key outputs:**
-- `figures/surrogate_predictions.png`
+- `figures/surrogate_predictions.png` (numbered hold-out key)
+- `data/surrogate_metrics.csv` (train / CV / hold-out + pool LOOCV)
 - `figures/qaoa_comparison.png`
 - `figures/qaoa_convergence.png`
 - `figures/qaoa_landscape.png`
@@ -180,7 +185,23 @@ With MP-grounded structure descriptors (`data/mp_theta_sh.csv`), classical
 baselines beat QAOA on the surrogate oracle. QAOA p=1/2 tie as the best
 quantum run; p=3 does not improve the selection on this 12-material problem.
 
+Surrogate honesty (#20): numbered hold-out diamonds vs in-sample train cloud
+(`figures/surrogate_predictions.png`; metrics in `data/surrogate_metrics.csv`).
+
+| Split | n | RMSE | R² |
+|-------|---|------|----|
+| Train (in-sample) | 25 | 0.116 | 0.93 |
+| 5-fold CV | 25 | 0.458 | −0.03 |
+| Hold-out | 7 | 1.200 | 0.08 |
+| QAOA pool in-sample | 12 | 0.006 | — |
+| QAOA pool LOOCV | 12 | 1.71 | — |
+
+Regenerate with `python scripts/evaluate_surrogate.py`.
+
 <table>
+<tr>
+<td colspan="2"><img src="../figures/surrogate_predictions.png" alt="Surrogate train vs numbered hold-out" width="100%"></td>
+</tr>
 <tr>
 <td><img src="../figures/qaoa_material_ranking.png" alt="QAOA material ranking" width="100%"></td>
 <td><img src="../figures/qaoa_comparison.png" alt="QAOA vs baselines" width="100%"></td>
@@ -321,6 +342,6 @@ Or open JupyterLab and run interactively.
 
 ## NB04 provenance and scope
 
-NB04 operates on **k=3 from an N=12 QAOA pool** drawn from the Phase-A **32**-material illustrative CSV. Surrogate scatter diagnostics may use the full corpus; the near-diagonal pool fit remains a training diagnostic, not out-of-sample validation. The ranking figure highlights exactly three entries because `k=3` is imposed by the QUBO constraint.
+NB04 operates on **k=3 from an N=12 QAOA pool** drawn from the Phase-A **32**-material illustrative CSV. Surrogate diagnostics report train, cross-validated, and hold-out RMSE; the near-diagonal train scatter is not out-of-sample validation. QAOA weights use `oracle=in_sample` on the pool for published continuity, with pool LOOCV RMSE reported alongside. The ranking figure highlights exactly three entries because `k=3` is imposed by the QUBO constraint.
 
 The committed targets are not asserted to be row-wise literature measurements. Consult [the provenance contract](../data/theta_sh_sources.md) and [machine-readable ledger](../data/theta_sh_provenance.csv). Results are limited to this fixed oracle and do not establish materials discovery, DFT-computed theta_SH, a global physical optimum, or quantum advantage.

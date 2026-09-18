@@ -10,7 +10,7 @@ column is an **illustrative oracle** for workflow reproducibility — see
 
 | Role | Size | Notes |
 |------|------|-------|
-| Full training corpus | 32 | Surrogate fit + CV-ready (`n ≥ 20`) |
+| Full training corpus | 32 | Surrogate fit + k-fold CV / hold-out diagnostics |
 | QAOA / greedy / SA pool | 12 | First 12 historical formulas; Hilbert space `2^12` |
 
 Refresh MP descriptors (requires `MP_API_KEY`):
@@ -18,6 +18,12 @@ Refresh MP descriptors (requires `MP_API_KEY`):
 ```bash
 pip install -e ".[data]"
 python scripts/fetch_mp_theta_sh.py
+```
+
+Regenerate surrogate evaluation artifacts (no API key):
+
+```bash
+python scripts/evaluate_surrogate.py
 ```
 
 Notebook runs use the committed CSV — **no API key**.
@@ -36,5 +42,10 @@ Notebook runs use the committed CSV — **no API key**.
 | `ed_reference_energies.csv` | NB01 / NB05 |
 | `vqe_results.csv`, `vqe_seeds_n9.csv`, `vqe_scaling.csv` | NB02 / NB05 |
 | `qaoa_results.csv` | NB04 |
+| `surrogate_metrics.csv` | NB04 (train / CV / hold-out + pool LOOCV) |
+
+`n_samples` in `surrogate_metrics.csv` is the **training split** (25 rows after
+the 20% hold-out), not the 32-row corpus. Regenerate the CSV and
+`figures/surrogate_predictions.png` with `python scripts/evaluate_surrogate.py`.
 | `dmrg_reference_energies.csv` | NB06 |
 | `method_comparison.csv`, `nqs_*_history_*.csv` | NB07 |

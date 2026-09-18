@@ -18,7 +18,7 @@ pip install -e ".[dev]"
 pytest tests/ -v
 ```
 
-GitHub Actions (`.github/workflows/ci.yml`) runs `ruff check src/` and `pytest tests/` on Python 3.11 and 3.12 for every push and pull request to `master`. Optional `[dmrg]` / `[nqs]` extras are not installed in CI, so those tests skip via `importorskip`.
+GitHub Actions (`.github/workflows/ci.yml`) runs `ruff check src/` and `pytest tests/` on Python 3.11 and 3.12 for every push and pull request to `master`. `[dev]` includes `scikit-learn` so surrogate MLP / hold-out tests run in CI. Optional `[dmrg]` / `[nqs]` extras are not installed in CI, so those tests skip via `importorskip`.
 
 On Windows using the shared workspace venv at `d:\ARPA\OpenSource\Spintronics\.venv`:
 
@@ -37,7 +37,7 @@ tests/
 ├── test_ansatz.py          # HEA, HVA, MERA param counts + circuit execution
 ├── test_vqe.py             # COBYLA and Adam VQE runners
 ├── test_entanglement.py    # Reduced density matrix + Von Neumann entropy
-├── test_surrogate.py       # CSV + mock data, feature extraction, MLP training, prediction
+├── test_surrogate.py       # CSV + mock, features, MLP, CV / hold-out, predict_oracle, metrics CSV
 ├── test_qaoa.py            # Cost/mixer Hamiltonians, QAOA run, classical greedy
 ├── test_dmrg.py            # TeNPy Hamiltonian match + N=9 DMRG energy (optional dep)
 └── test_nqs.py             # NetKet Hamiltonian match + complex RBM vs ED (optional dep)
@@ -55,7 +55,7 @@ All tests use **N=3** (one Kagome unit cell, 3 sites) or **N=4** (QAOA) with min
 | `ansatz.py` | `test_ansatz.py` | HEA/HVA/MERA parameter counts (exact), `init_params` reproducibility and scale, circuit execution → normalized statevector |
 | `vqe.py` | `test_vqe.py` | `VQEResult` fields, COBYLA: energy finiteness, history length, gradient variance empty, statevector shape/normalization, metadata; Adam: grad variance non-empty |
 | `entanglement.py` | `test_entanglement.py` | RDM shape/trace/hermiticity/PSD, entropy = 0 for product state, entropy = 1 for Bell pair, upper bound, base conversion |
-| `surrogate.py` | `test_surrogate.py` | CSV load (`mp_theta_sh.csv` ≥30), mock fallback, QAOA pool helpers, Mn₃Sn + real MP ID, feature matrix, training, prediction, provenance contract |
+| `surrogate.py` | `test_surrogate.py` | CSV load (`mp_theta_sh.csv` ≥30), mock fallback, QAOA pool helpers, Mn₃Sn + real MP ID, feature matrix, training, **CV / hold-out / predict_oracle**, committed `surrogate_metrics.csv`, provenance contract |
 | `qaoa.py` | `test_qaoa.py` | Cost/mixer Hamiltonian types, QAOA result structure, landscape grid, param history, classical greedy top-k |
 | `dmrg.py` | `test_dmrg.py` | TeNPy/PennyLane Hamiltonian match, N=9 energy vs ED (< 0.01%), CSV round-trip (skipped if `physics-tenpy` not installed) |
 | `nqs.py` | `test_nqs.py` | NetKet/PennyLane Hamiltonian match, complex RBM N=9 <5% vs ED, real RBM plateau check, CSV round-trip (skipped if `netket` not installed) |
@@ -102,7 +102,7 @@ pytest tests/ --cov=spinq_vqe --cov-report=term-missing
 ruff check src/
 ```
 
-`ruff` is configured in `pyproject.toml` under `[tool.ruff]`. Run before committing.
+`ruff` is configured in `pyproject.toml` under `[tool.ruff]`. CI lints `src/`. Run before committing. Regenerate NB04 surrogate artifacts with `python scripts/evaluate_surrogate.py`.
 
 ---
 
@@ -127,4 +127,4 @@ When adding a new module or extending an existing one:
 
 ---
 
-*Last updated: 2026-08-17 · spinq-vqe v0.1.6*
+*Last updated: 2026-09-18 · spinq-vqe v0.1.6*

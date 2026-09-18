@@ -1,0 +1,2 @@
+n_samples,train_rmse,train_r2,cv_rmse,cv_r2,cv_strategy,n_hold_out,hold_out_rmse,hold_out_r2,hold_out_formulas,oracle_mode,pool_n,pool_train_rmse,pool_loocv_rmse,pool_oracle_mode
+25,0.115909,0.933880,0.458377,-0.034051,kfold-5,7,1.200468,0.076421,W;Pd;MnPt;Bi2Se3;Ag;Sb2Te3;Mn3Ga,in_sample,12,0.006012,1.709600,in_sample

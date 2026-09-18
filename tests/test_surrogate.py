@@ -17,14 +17,19 @@ from spinq_vqe.surrogate import (
     QAOA_POOL_SIZE,
     MaterialRecord,
     SurrogateDataset,
+    SurrogateMetrics,
     TrainedSurrogate,
     build_features,
+    cross_validate_surrogate,
     filter_by_formulas,
     load_mock_data,
     load_theta_sh_csv,
     load_theta_sh_data,
     predict,
+    predict_oracle,
     qaoa_pool_dataset,
+    save_surrogate_metrics,
+    split_hold_out,
     train_surrogate,
 )
 
@@ -183,6 +188,125 @@ class TestTrainSurrogate:
         with pytest.raises(ValueError, match="samples"):
             train_surrogate(small_ds)
 
+    def test_cv_metrics_finite_with_sklearn(self):
+        pytest.importorskip("sklearn")
+        ds = load_theta_sh_csv()
+        sr = train_surrogate(ds, cv_strategy="kfold", cv_folds=5, random_state=0)
+        assert sr.metrics is not None
+        assert np.isfinite(sr.cv_r2)
+        assert np.isfinite(sr.cv_rmse)
+        assert np.isfinite(sr.train_rmse)
+        assert sr.metrics.cv_strategy.startswith("kfold")
+        # Honest CV should be worse than (or equal to) in-sample train fit
+        assert sr.cv_rmse >= sr.train_rmse - 1e-9
+
+    def test_hold_out_metrics(self):
+        pytest.importorskip("sklearn")
+        ds = load_theta_sh_csv()
+        sr = train_surrogate(
+            ds, hold_out_frac=0.2, random_state=0, cv_strategy="kfold"
+        )
+        assert sr.metrics is not None
+        assert sr.metrics.n_hold_out >= 1
+        assert np.isfinite(sr.metrics.hold_out_rmse)
+        assert len(sr.metrics.hold_out_formulas) == sr.metrics.n_hold_out
+
+
+class TestHoldOutAndOracle:
+    def test_split_hold_out_sizes(self):
+        ds = load_theta_sh_csv()
+        train, hold = split_hold_out(ds, hold_out_frac=0.2, random_state=0)
+        assert train.n_samples + hold.n_samples == ds.n_samples
+        assert hold.n_samples == 7
+        assert train.n_samples == 25
+        assert set(train.formulas).isdisjoint(set(hold.formulas))
+        # Seed 0 on the committed 32-row CSV (order = original CSV order)
+        assert list(hold.formulas) == [
+            "W", "Pd", "MnPt", "Bi2Se3", "Ag", "Sb2Te3", "Mn3Ga",
+        ]
+
+    def test_split_hold_out_explicit_formulas(self):
+        ds = load_theta_sh_csv()
+        train, hold = split_hold_out(ds, hold_out_formulas=["Bi2Te3", "Os"])
+        assert set(hold.formulas) == {"Bi2Te3", "Os"}
+        assert "Bi2Te3" not in train.formulas
+
+    def test_predict_oracle_in_sample_matches_predict(self):
+        pytest.importorskip("sklearn")
+        pool = qaoa_pool_dataset(load_theta_sh_csv())
+        oof, metrics = predict_oracle(
+            pool, mode="in_sample", max_iter=3000, random_state=42
+        )
+        sr = train_surrogate(pool, max_iter=3000, random_state=42, compute_cv=False)
+        pred = predict(sr, pool.records)
+        assert metrics.oracle_mode == "in_sample"
+        np.testing.assert_allclose(oof, pred, rtol=1e-5, atol=1e-5)
+
+    def test_predict_oracle_loocv_finite(self):
+        pytest.importorskip("sklearn")
+        pool = qaoa_pool_dataset(load_theta_sh_csv())
+        oof, metrics = predict_oracle(
+            pool, mode="loocv", max_iter=1500, random_state=0
+        )
+        assert len(oof) == pool.n_samples
+        assert np.all(np.isfinite(oof))
+        assert metrics.oracle_mode == "loocv"
+        assert metrics.cv_strategy == "loocv"
+        assert np.isfinite(metrics.cv_rmse)
+
+    def test_predict_oracle_rejects_unknown_mode(self):
+        pool = qaoa_pool_dataset(load_theta_sh_csv())
+        with pytest.raises(ValueError, match="mode"):
+            predict_oracle(pool, mode="train_rmse")
+
+    def test_linear_relationship_cv_sanity(self):
+        """Synthetic linear target → CV R² should be strongly positive."""
+        pytest.importorskip("sklearn")
+        rng = np.random.default_rng(0)
+        records = []
+        for i in range(24):
+            z = 20 + i
+            # Plant a near-linear θ_SH in z_max so MLP/ridge can recover it
+            theta = 0.01 * z + 0.001 * rng.normal()
+            records.append(
+                MaterialRecord(
+                    mp_id=f"mp-lin-{i}",
+                    formula=f"X{i}",
+                    crystal_system="cubic",
+                    z_max=z,
+                    n_elements=1,
+                    space_group=225,
+                    ahc=0.0,
+                    theta_sh=theta,
+                    source="mock",
+                )
+            )
+        ds = SurrogateDataset(records=records)
+        _, metrics = cross_validate_surrogate(
+            ds, cv_strategy="kfold", cv_folds=5, max_iter=2000, random_state=0
+        )
+        assert metrics.cv_r2 > 0.5
+
+    def test_save_surrogate_metrics_roundtrip(self, tmp_path):
+        m = SurrogateMetrics(
+            n_samples=32,
+            train_rmse=0.1,
+            train_r2=0.9,
+            cv_rmse=0.5,
+            cv_r2=-1.0,
+            cv_strategy="kfold-5",
+            n_hold_out=6,
+            hold_out_rmse=0.6,
+            hold_out_r2=-2.0,
+            hold_out_formulas=("Os", "Bi"),
+            oracle_mode="in_sample",
+        )
+        path = save_surrogate_metrics(m, tmp_path / "m.csv", extra={"scope": "full"})
+        text = path.read_text(encoding="utf-8")
+        assert "kfold-5" in text
+        assert "Os;Bi" in text
+        assert "full" in text
+
 
 # ---------------------------------------------------------------------------
 # Prediction
@@ -213,6 +337,38 @@ class TestPredict:
         sr = train_surrogate(ds)
         preds = predict(sr, [ds.records[0]])
         assert len(preds) == 1
+
+
+def test_committed_surrogate_metrics_csv():
+    """NB04 evaluation artifact exists with expected columns and hold-out set."""
+    import csv
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[1] / "data" / "surrogate_metrics.csv"
+    assert path.is_file()
+    with path.open(newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    assert len(rows) == 1
+    row = rows[0]
+    for col in (
+        "n_samples",
+        "train_rmse",
+        "cv_rmse",
+        "hold_out_rmse",
+        "hold_out_formulas",
+        "pool_oracle_mode",
+        "pool_loocv_rmse",
+    ):
+        assert col in row
+    assert int(row["n_samples"]) == 25
+    assert int(row["n_hold_out"]) == 7
+    assert row["hold_out_formulas"] == "W;Pd;MnPt;Bi2Se3;Ag;Sb2Te3;Mn3Ga"
+    assert row["pool_oracle_mode"] == "in_sample"
+    assert int(row["pool_n"]) == 12
+    assert float(row["hold_out_rmse"]) > float(row["train_rmse"])
+    assert float(row["pool_loocv_rmse"]) > float(row["pool_train_rmse"])
+
+
 def test_committed_theta_sh_provenance_contract():
     """Every oracle row is explicitly sourced or explicitly illustrative."""
     import csv
@@ -234,3 +390,27 @@ def test_committed_theta_sh_provenance_contract():
         row["mp_id"] for row in provenance_rows
     }
     assert len(oracle_rows) >= 30
+
+
+def test_plot_surrogate_holdout_numbers_match_table(tmp_path):
+    """Each hold-out diamond number corresponds to one table row."""
+    matplotlib = pytest.importorskip("matplotlib")
+    matplotlib.use("Agg")
+    from spinq_vqe.utils import plot_surrogate_holdout
+
+    rng = np.random.default_rng(0)
+    train_t = rng.normal(size=12)
+    train_p = train_t + 0.05 * rng.normal(size=12)
+    hold_t = np.array([3.5, 1.5, 0.15])
+    hold_p = np.array([1.0, 0.0, 1.4])
+    formulas = ["Bi2Se3", "Sb2Te3", "MnPt"]
+    fig = plot_surrogate_holdout(
+        train_t, train_p, hold_t, hold_p, formulas, save_path=str(tmp_path / "p.png")
+    )
+    assert len(fig.axes) == 2
+    table = fig.axes[1].tables[0]
+    # Header + 3 data rows; first data cell is "1" (worst |err| = Bi2Se3)
+    cells = table.get_celld()
+    assert cells[1, 0].get_text().get_text() == "1"
+    assert cells[1, 1].get_text().get_text() == "Bi2Se3"
+    matplotlib.pyplot.close(fig)
