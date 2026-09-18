@@ -2,8 +2,8 @@
 """
 Refresh data/mp_theta_sh.csv from the Materials Project API.
 
-MP provides structure descriptors; theta_SH labels come from literature
-(see CURATED_LITERATURE in spinq_vqe.surrogate).
+MP provides structure descriptors; theta_SH labels come from the illustrative
+CURATED_ORACLE table in spinq_vqe.surrogate (see data/theta_sh_sources.md).
 
 Requires:
   - pip install -e ".[data]"

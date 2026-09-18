@@ -185,6 +185,8 @@ from spinq_vqe import surrogate
 | `load_theta_sh_data()` | **Primary** — load `data/mp_theta_sh.csv` (committed, no API key) |
 | `load_theta_sh_csv(path)` | Load CSV directly |
 | `load_mock_data()` | Offline fallback for unit tests only |
+| `qaoa_pool_dataset(dataset)` | Historical N=12 QAOA candidate pool |
+| `filter_by_formulas(dataset, formulas)` | Subset by formula (with MP pretty-name aliases) |
 | `fetch_curated_mp_dataset(api_key)` | Fetch MP descriptors + illustrative oracle targets (refresh) |
 | `load_mp_data(api_key)` | Same as fetch, returns dataset only |
 | `save_theta_sh_csv(dataset, path, extra)` | Write CSV after a refresh |
@@ -194,10 +196,11 @@ from spinq_vqe import surrogate
 | `surrogate_summary(surrogate)` | Print model info + CV R² |
 
 ```python
-ds = surrogate.load_theta_sh_data()    # uses data/mp_theta_sh.csv
-sr = surrogate.train_surrogate(ds)
-surrogate.surrogate_summary(sr)
-theta_sh = surrogate.predict(sr, ds.records)
+ds = surrogate.load_theta_sh_data()       # full Phase-A CSV (≥30)
+sr = surrogate.train_surrogate(ds)        # diversity / CV diagnostics
+pool = surrogate.qaoa_pool_dataset(ds)    # N=12 historical pool
+sr_qaoa = surrogate.train_surrogate(pool)
+theta_sh = surrogate.predict(sr_qaoa, pool.records)
 ```
 
 Refresh CSV (optional, requires `MP_API_KEY` in `.env`):

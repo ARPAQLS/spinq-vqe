@@ -14,10 +14,16 @@ property. Every row must have one of these `theta_sh_source` values:
 The row-level ledger is `data/theta_sh_provenance.csv`. A broad review citation
 does not upgrade a row to `sourced_primary`.
 
+Issue [#19](https://github.com/ARPAQLS/spinq-vqe/issues/19) asked for
+`theta_sh_source=literature`. That label is **not** used here: it conflicts with
+this contract. Phase-A expansion keeps every row as `illustrative_oracle` until
+a primary measurement is audited row-by-row.
+
 ## Current audit
 
-All 12 committed targets are currently `illustrative_oracle`. Three spot checks
-already demonstrate why:
+All **32** committed targets are `illustrative_oracle` (Phase A: 12 historical
+QAOA-pool rows + 20 diversity rows). Three spot checks on the historical pool
+already demonstrate why generic “literature” tags are unsafe:
 
 | CSV row | Oracle target | Primary result | Primary reference | Audit result |
 |---|---:|---:|---|---|
@@ -35,11 +41,19 @@ properties in `mp_theta_sh.csv`. It does not supply the committed θ_SH targets.
 Matching a chemical formula to an MP structure does not establish that a
 thin-film or device measurement applies to that polymorph.
 
+MP pretty formulas may differ from oracle keys (e.g. `Co2MnGa` → `MnGaCo2`,
+`MoTe2` → `Te2Mo`). Canonical names are recorded in `theta_sh_provenance.csv`.
+
 ## What NB04 demonstrates
 
 NB04 demonstrates the pipeline
 
-`12 fixed oracle targets -> in-sample surrogate -> k=3 QUBO -> QAOA/classical comparison`.
+`32-row illustrative corpus → surrogate diagnostics → k=3 QAOA on a fixed N=12 pool`.
+
+- **Surrogate section:** trains on the full Phase-A CSV (diversity / CV-ready).
+- **QAOA / greedy / SA:** use `surrogate.qaoa_pool_dataset()` (historical 12
+  formulas) so the Hilbert space stays `2^12` and published selection totals
+  remain comparable.
 
 The reported totals and selected triples are results on that precise committed
 oracle. They do not establish DFT-computed θ_SH, production materials discovery,

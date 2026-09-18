@@ -40,7 +40,7 @@ import os
 import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 import numpy as np
 
@@ -155,9 +155,11 @@ CSV_COLUMNS = [
     "ahc", "theta_sh", "theta_sh_source", "band_gap", "is_magnetic", "source",
 ]
 
-# 12 reproducibility targets for NB04. These are illustrative oracle inputs,
-# not verified row-wise literature measurements (MP has no θ_SH field).
+# Curated spintronic Phase-A oracle (≥30). θ_SH/AHC are illustrative workflow
+# targets (MP has no θ_SH field) — see data/theta_sh_sources.md. The first
+# QAOA_POOL_SIZE entries are the historical NB04 candidate pool (k-from-N=12).
 CURATED_ORACLE: list[dict[str, Any]] = [
+    # --- historical QAOA pool (N=12); values frozen for continuity ---
     {"formula": "Mn3Sn",   "theta_sh":  0.35, "ahc": 200.0},
     {"formula": "Pt",      "theta_sh":  0.08, "ahc":   0.0},
     {"formula": "W",       "theta_sh": -0.33, "ahc":   0.0},
@@ -170,7 +172,34 @@ CURATED_ORACLE: list[dict[str, Any]] = [
     {"formula": "CrTe2",   "theta_sh":  0.40, "ahc": 320.0},
     {"formula": "MnPt",    "theta_sh":  0.15, "ahc": 150.0},
     {"formula": "Bi2Se3",  "theta_sh":  3.50, "ahc":   0.0},
+    # --- Phase A expansion: heavy metals / TMD / Heusler / TI family ---
+    {"formula": "Ir",      "theta_sh":  0.05, "ahc":   0.0},
+    {"formula": "Rh",      "theta_sh":  0.03, "ahc":   0.0},
+    {"formula": "Ru",      "theta_sh": -0.05, "ahc":   0.0},
+    {"formula": "Mo",      "theta_sh": -0.08, "ahc":   0.0},
+    {"formula": "Nb",      "theta_sh": -0.04, "ahc":   0.0},
+    {"formula": "Hf",      "theta_sh": -0.15, "ahc":   0.0},
+    {"formula": "Re",      "theta_sh": -0.20, "ahc":   0.0},
+    {"formula": "Os",      "theta_sh":  0.06, "ahc":   0.0},
+    {"formula": "Cu",      "theta_sh":  0.02, "ahc":   0.0},
+    {"formula": "Ag",      "theta_sh":  0.04, "ahc":   0.0},
+    {"formula": "Bi",      "theta_sh":  0.50, "ahc":   0.0},
+    {"formula": "Sb",      "theta_sh":  0.25, "ahc":   0.0},
+    {"formula": "Bi2Te3",  "theta_sh":  2.00, "ahc":   0.0},
+    {"formula": "Sb2Te3",  "theta_sh":  1.50, "ahc":   0.0},
+    {"formula": "MoTe2",   "theta_sh":  0.80, "ahc":   0.0},
+    {"formula": "WTe2",    "theta_sh":  1.00, "ahc":   0.0},
+    {"formula": "Mn3Ge",   "theta_sh":  0.30, "ahc": 180.0},
+    {"formula": "Mn3Ga",   "theta_sh":  0.28, "ahc": 220.0},
+    {"formula": "Co2MnSi", "theta_sh":  0.12, "ahc": 900.0},
+    {"formula": "FeRh",    "theta_sh":  0.10, "ahc":  80.0},
 ]
+
+QAOA_POOL_SIZE = 12
+QAOA_POOL_FORMULAS: tuple[str, ...] = tuple(
+    e["formula"] for e in CURATED_ORACLE[:QAOA_POOL_SIZE]
+)
+MIN_CURATED_N = 30
 
 # Offline test fallback (no CSV, no API).
 _MOCK_DATA: list[dict] = [
@@ -292,7 +321,7 @@ def load_mock_data() -> SurrogateDataset:
     """
     Return the illustrative NB04 oracle fallback (offline, no API key needed).
 
-    Includes 12 representative spintronic materials with fixed target values.
+    Mirrors ``CURATED_ORACLE`` (≥30 Phase-A materials) with fixed target values.
     Useful for tests and workflow reproduction, not as a measurement table.
 
     Returns
@@ -306,9 +335,62 @@ def load_mock_data() -> SurrogateDataset:
     return SurrogateDataset(records=records)
 
 
+def filter_by_formulas(
+    dataset: SurrogateDataset,
+    formulas: Sequence[str],
+) -> SurrogateDataset:
+    """
+    Return a dataset restricted to ``formulas`` (order preserved).
+
+    Formula matching is exact on ``MaterialRecord.formula`` as stored in the
+    CSV / MP fetch (e.g. ``MnGaCo2`` may appear for oracle key ``Co2MnGa``).
+    Pass the formulas as they appear in ``dataset.formulas``.
+    """
+    wanted = list(formulas)
+    by_formula = {r.formula: r for r in dataset.records}
+    missing = [f for f in wanted if f not in by_formula]
+    if missing:
+        # Allow oracle-key aliases used in CURATED_ORACLE vs MP pretty formulas.
+        alias = {
+            "Co2MnGa": "MnGaCo2",
+            "IrMn3": "Mn3Ir",
+            "MoTe2": "Te2Mo",
+            "WTe2": "Te2W",
+            "Co2MnSi": "MnCo2Si",
+        }
+        resolved: list[MaterialRecord] = []
+        still_missing: list[str] = []
+        for f in wanted:
+            if f in by_formula:
+                resolved.append(by_formula[f])
+            elif alias.get(f) in by_formula:
+                resolved.append(by_formula[alias[f]])
+            else:
+                still_missing.append(f)
+        if still_missing:
+            raise KeyError(
+                f"Formulas not in dataset: {still_missing}. "
+                f"Available: {sorted(by_formula)}"
+            )
+        return SurrogateDataset(records=resolved)
+
+    return SurrogateDataset(records=[by_formula[f] for f in wanted])
+
+
+def qaoa_pool_dataset(dataset: SurrogateDataset | None = None) -> SurrogateDataset:
+    """
+    Historical NB04 QAOA candidate pool (N=12).
+
+    Surrogate training may use the full Phase-A CSV (≥30 rows); QAOA / greedy /
+    SA stay on this pool so the Hilbert space remains 2^12.
+    """
+    ds = dataset if dataset is not None else load_theta_sh_data()
+    return filter_by_formulas(ds, QAOA_POOL_FORMULAS)
+
+
 def fetch_curated_mp_dataset(api_key: str | None = None) -> tuple[SurrogateDataset, list[dict]]:
     """
-    Fetch MP structure descriptors for the 12 curated spintronic materials.
+    Fetch MP structure descriptors for all ``CURATED_ORACLE`` materials.
 
     θ_SH and AHC come from ``CURATED_ORACLE`` (MP does not expose θ_SH).
     For each formula, picks the lowest-energy-above-hull MP entry.
