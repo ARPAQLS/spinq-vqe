@@ -36,7 +36,7 @@ The spin Hall angle (θ_SH) is the figure of merit for spin-orbit torque efficie
 
 Materials Project supplies the structure metadata, while the θ_SH targets are a fixed illustrative oracle (`illustrative_oracle` in `data/mp_theta_sh.csv`). NB04 reports **train / CV / hold-out** surrogate metrics on the Phase-A corpus and runs QAOA / greedy / SA on a **fixed historical N=12 pool** with `oracle=in_sample` (pool LOOCV RMSE reported for honesty) — a reproducibility and method-demonstration workflow, not a materials-discovery claim.
 
-**Decisions made in this release:** classical surrogate oracle (not raw DFT per evaluation); QAOA depths p = 1, 2, 3 compared against greedy and simulated-annealing baselines; k = 3 selected from N = 12 pool materials (full CSV is larger for diversity); p=1 (γ, β) landscape and depth-sensitivity plot (`figures/qaoa_landscape.png`) show that shallow QAOA can stall in a suboptimal basin while classical baselines reach the global optimum. Surrogate honesty is reported as train / 5-fold CV / hold-out RMSE (`figures/surrogate_predictions.png`, `data/surrogate_metrics.csv`).
+**Decisions made in this release:** classical surrogate oracle (not raw DFT per evaluation); QAOA depths p = 1, 2, 3 compared against greedy and simulated-annealing baselines; k = 3 selected from N = 12 pool materials (full CSV is larger for diversity); p=1 (γ, β) landscape and depth-sensitivity plot (`figures/qaoa_landscape.png`) show that shallow QAOA can stall in a suboptimal basin while classical baselines reach the global optimum. A λ / budget / depth sweep on the same frozen oracle (`figures/qaoa_sweep.png`, `data/qaoa_sweep.csv`) checks that this is not a single COBYLA setting. Surrogate honesty is reported as train / 5-fold CV / hold-out RMSE (`figures/surrogate_predictions.png`, `data/surrogate_metrics.csv`).
 
 ---
 
@@ -97,6 +97,13 @@ Hold-out / CV on the 32-row corpus (`data/surrogate_metrics.csv`; regenerate wit
 
 <img src="figures/surrogate_predictions.png" alt="Surrogate train vs numbered hold-out" width="720">
 
+Best QAOA in the λ / budget / depth sweep is **3.570** (p=1, λ=5;
+W / CrTe₂ / Bi₂Se₃), still **0.69** below greedy **4.259**. Extra COBYLA
+budget at λ=6 does not close the gap. The published table above is unchanged.
+The sweep figure reports θ_SH of the best-cost seed, matching the table.
+
+<img src="figures/qaoa_sweep.png" alt="QAOA lambda and budget sweep" width="720">
+
 ---
 
 ## Scientific context
@@ -133,7 +140,7 @@ Full bibliography: [`REFERENCES.md`](REFERENCES.md) (50+ entries).
 - **Sourced θ_SH audits** — Phase A (32 illustrative rows) landed; later phases may add `sourced_primary` values or further diversity via `scripts/fetch_mp_theta_sh.py`
 - **Paper draft** — LaTeX manuscript targeting Physical Review B or npj Quantum Materials
 
-DMRG (v0.1.5) and NQS (v0.1.6) comparisons are in the repository. Surrogate hold-out / CV diagnostics (#20) are in NB04.
+DMRG (v0.1.5) and NQS (v0.1.6) comparisons are in the repository. Surrogate hold-out / CV diagnostics (#20) and the QAOA λ / budget / depth sweep (#21) are in NB04.
 
 ---
 

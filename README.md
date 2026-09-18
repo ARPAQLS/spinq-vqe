@@ -57,7 +57,7 @@ spinq-vqe/
 ├── notebooks/           # Executable research notebooks
 ├── figures/             # Generated plots
 ├── data/                # ED/VQE/QAOA/DMRG/NQS CSVs, mp_theta_sh.csv, surrogate_metrics.csv
-├── scripts/             # Benchmarks, fetch_mp_theta_sh.py, evaluate_surrogate.py
+├── scripts/             # Benchmarks, fetch_mp_theta_sh.py, evaluate_surrogate.py, run_qaoa_sweep.py
 ├── docs/                # Guides and API reference → docs/README.md
 ├── OVERVIEW.md          # Full program description + research context
 └── REFERENCES.md        # Full bibliography (50+ references)
@@ -101,7 +101,7 @@ python scripts/fetch_mp_theta_sh.py
 | 01 | [`01_kagome_hamiltonian.ipynb`](notebooks/01_kagome_hamiltonian.ipynb) | lattice, ED baseline, figures |
 | 02 | [`02_vqe_run.ipynb`](notebooks/02_vqe_run.ipynb) | COBYLA seed stats (mean ± std), 9.66% best error, Adam barren plateau |
 | 03 | [`03_entanglement.ipynb`](notebooks/03_entanglement.ipynb) | entropy profile, MI matrix, sublattice correlations |
-| 04 | [`04_soc_qaoa.ipynb`](notebooks/04_soc_qaoa.ipynb) | surrogate train/CV/hold-out, QAOA p=1/2/3, ranking, landscape |
+| 04 | [`04_soc_qaoa.ipynb`](notebooks/04_soc_qaoa.ipynb) | surrogate train/CV/hold-out, QAOA p=1/2/3, λ/budget sweep, ranking, landscape |
 | 05 | [`05_scaling_analysis.ipynb`](notebooks/05_scaling_analysis.ipynb) | N=9/12/18 scaling, gradient variance, barren plateau |
 | 06 | [`06_dmrg_comparison.ipynb`](notebooks/06_dmrg_comparison.ipynb) | TeNPy DMRG vs ED/VQE, χ convergence, entanglement profile |
 | 07 | [`07_nqs_comparison.ipynb`](notebooks/07_nqs_comparison.ipynb) | NetKet NQS (complex RBM / RBMModPhase) vs ED/DMRG/VQE |
@@ -164,6 +164,8 @@ distributions are in `data/vqe_results.csv`, `data/vqe_seeds_n9.csv`, and
 
 ### SOC material selection via QAOA
 
+Published NB04 totals (λ=6, 300 evals) on the frozen N=12 in-sample pool:
+
 | Method | Total θ_SH | Selected | Notes |
 |--------|-----------|----------|-------|
 | QAOA p=1 | 3.049 | W, Ta, Bi₂Se₃ | Best QAOA depth — still sub-optimal |
@@ -172,9 +174,15 @@ distributions are in `data/vqe_results.csv`, `data/vqe_seeds_n9.csv`, and
 | **Greedy (classical)** | **4.259** | **Bi₂Se₃, CrTe₂, Mn₃Sn** | Optimal on surrogate oracle |
 | Sim. annealing | 4.259 | Mn₃Sn, CrTe₂, Bi₂Se₃ | Matches greedy |
 
-Hold-out / CV metrics live in `data/surrogate_metrics.csv` (regenerate with
-`python scripts/evaluate_surrogate.py`). The scatter is a **train vs numbered
-hold-out** diagnostic (not a discovery claim):
+<img src="figures/qaoa_material_ranking.png" alt="QAOA material ranking" width="560">
+
+p=1 (γ, β) landscape and θ_SH vs depth, pinned to the table above:
+
+<img src="figures/qaoa_landscape.png" alt="QAOA p=1 landscape and depth sensitivity" width="720">
+
+Hold-out / CV metrics (`data/surrogate_metrics.csv`; regenerate with
+`python scripts/evaluate_surrogate.py`). Numbered scatter is a
+**train vs hold-out** diagnostic, not a discovery claim:
 
 | Split | n | RMSE | R² | Notes |
 |-------|---|------|----|-------|
@@ -186,9 +194,14 @@ hold-out** diagnostic (not a discovery claim):
 
 <img src="figures/surrogate_predictions.png" alt="Surrogate train vs numbered hold-out" width="720">
 
-<img src="figures/qaoa_material_ranking.png" alt="QAOA material ranking" width="560">
+A λ / budget / depth sweep on the **same frozen oracle**
+(`data/qaoa_sweep.csv`; `python scripts/run_qaoa_sweep.py`) does **not**
+replace the table. Best QAOA in the grid is **3.570** (p=1, λ=5;
+W / CrTe₂ / Bi₂Se₃), still **0.69** below greedy **4.259**. Extra COBYLA
+budget at λ=6 does not close the gap; a p=4 probe reaches 3.40. Points are
+θ_SH of the **best-cost seed** (same rule as the table).
 
-<img src="figures/qaoa_landscape.png" alt="QAOA p=1 landscape and depth sensitivity" width="720">
+<img src="figures/qaoa_sweep.png" alt="QAOA lambda and budget sweep" width="720">
 
 ## Tests
 

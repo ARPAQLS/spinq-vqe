@@ -32,8 +32,8 @@ Pipeline
 1. ``build_cost_hamiltonian(theta_sh, k, lam)``  — build H_C from θ_SH values
 2. ``build_mixer_hamiltonian(n_materials)``       — build H_M
 3. ``run_qaoa(theta_sh, k, p, ...)``              — full QAOA optimization
-4. ``qaoa_landscape_grid(...)``                     — (γ, β) cost landscape at p=1
-5. ``sample_bitstrings(result, n_shots)``          — sample from optimized circuit
+4. ``run_qaoa_sweep(...)``                          — λ / budget / depth grid (#21)
+5. ``qaoa_landscape_grid(...)``                     — (γ, β) cost landscape at p=1
 6. ``classical_greedy(theta_sh, k)``              — greedy baseline comparison → ``list[int]``
 7. ``classical_simulated_annealing(theta_sh, k)`` — SA baseline comparison
 
@@ -47,11 +47,36 @@ References
 
 from __future__ import annotations
 
+import csv
+import hashlib
 from dataclasses import dataclass, field
+from itertools import product
+from pathlib import Path
+from typing import Any, Sequence
 
 import numpy as np
 import pennylane as qp
 from scipy.optimize import minimize
+
+# Published NB04 QAOA settings. Changing these without regenerating
+# ``data/qaoa_results.csv`` would silently desynchronize the README table.
+NB04_K = 3
+NB04_LAM = 6.0
+NB04_OPTIMIZER_STEPS = 300
+NB04_N_SEEDS = 5
+NB04_STEP_SIZE = 0.3
+NB04_DEPTHS = (1, 2, 3)
+NB04_RNG_SEED = 42
+
+# Issue #21 default grid: issue text used λ∈{2,5,10,20}; we also include the
+# published λ=6 so the committed table contains the README config.
+DEFAULT_SWEEP_LAM = (2.0, 5.0, 6.0, 10.0, 20.0)
+DEFAULT_SWEEP_STEPS = (100, 300, 500)
+DEFAULT_SWEEP_P = (1, 2, 3)
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_QAOA_SWEEP_CSV = _REPO_ROOT / "data" / "qaoa_sweep.csv"
+DEFAULT_QAOA_SWEEP_SEEDS_CSV = _REPO_ROOT / "data" / "qaoa_sweep_seeds.csv"
 
 # ---------------------------------------------------------------------------
 # Result containers
@@ -88,6 +113,31 @@ class QAOAResult:
 
     param_history: list[np.ndarray] = field(default_factory=list)
     """(γ, β, …) at each COBYLA evaluation for the best seed (if recorded)."""
+
+    lam: float = 5.0
+    n_optimizer_steps: int = 0
+    n_evals: int = 0
+    """COBYLA evaluations actually used by the best seed."""
+    rng_seed: int = NB04_RNG_SEED
+    seed_theta_sh: list[float] = field(default_factory=list)
+    seed_energies: list[float] = field(default_factory=list)
+    argmax_k: int = 0
+    """Hamming weight of the unconstrained most-likely bitstring (best seed)."""
+    selected_prob: float = 0.0
+    """Probability of the decoded k-set (best seed)."""
+    mean_theta_sh: float = float("nan")
+    std_theta_sh: float = float("nan")
+
+
+@dataclass
+class QAOASweepResult:
+    """Summary + per-seed rows for a hyperparameter grid."""
+
+    summary: list[dict[str, Any]]
+    seeds: list[dict[str, Any]]
+    greedy_theta_sh: float
+    greedy_indices: list[int]
+    oracle_id: str
 
 
 @dataclass
@@ -226,8 +276,8 @@ def qaoa_circuit(
 
     # p alternating layers
     for layer in range(p):
-        qp.ApproxTimeEvolution(cost_h,  gamma[layer], 1)
-        qp.ApproxTimeEvolution(mixer_h, beta[layer],  1)
+        qp.ApproxTimeEvolution(cost_h, gamma[layer], 1)
+        qp.ApproxTimeEvolution(mixer_h, beta[layer], 1)
 
 
 # ---------------------------------------------------------------------------
@@ -384,10 +434,7 @@ def find_landscape_minima(
     minima.sort(key=lambda item: item[2])
     deduped: list[tuple[float, float, float]] = []
     for gamma, beta, energy in minima:
-        if all(
-            np.hypot(gamma - g, beta - b) > 0.35
-            for g, b, _ in deduped
-        ):
+        if all(np.hypot(gamma - g, beta - b) > 0.35 for g, b, _ in deduped):
             deduped.append((gamma, beta, energy))
         if len(deduped) >= max_minima:
             break
@@ -409,6 +456,7 @@ def run_qaoa(
     step_size: float = 0.1,
     verbose: bool = True,
     record_param_history: bool = False,
+    rng_seed: int = NB04_RNG_SEED,
 ) -> QAOAResult:
     """
     Run QAOA optimization for the k-from-N material selection problem.
@@ -424,16 +472,20 @@ def run_qaoa(
         Start with p=1, benchmark up to p=5.
     lam : float
         Constraint penalty. Rule of thumb: lam > max(theta_sh).
+        Published NB04 uses ``NB04_LAM`` (6.0), not this default (5.0).
     n_optimizer_steps : int
         COBYLA evaluations per seed.
     n_seeds : int
-        Number of random initializations. Best result is kept.
+        Number of random initializations. Best *cost* is kept; seed-level
+        θ_SH totals are stored on the result for variance reporting.
     step_size : float
         Initial step size for COBYLA (rhobeg).
     verbose : bool
     record_param_history : bool
         If True, store parameter vectors at each evaluation for the best seed
         (useful for landscape trajectory overlays).
+    rng_seed : int
+        Seed for the COBYLA initializations (independent per ``run_qaoa`` call).
 
     Returns
     -------
@@ -442,6 +494,10 @@ def run_qaoa(
     N = len(theta_sh)
     if k >= N:
         raise ValueError(f"k={k} must be < N={N}.")
+    if n_seeds < 1:
+        raise ValueError("n_seeds must be >= 1")
+    if n_optimizer_steps < 1:
+        raise ValueError("n_optimizer_steps must be >= 1")
 
     cost_h = build_cost_hamiltonian(theta_sh, k, lam)
     mixer_h = build_mixer_hamiltonian(N)
@@ -456,12 +512,16 @@ def run_qaoa(
     best_params = None
     best_history: list[float] = []
     best_param_history: list[np.ndarray] = []
+    best_selected: list[int] = []
+    best_argmax_k = 0
+    best_selected_prob = 0.0
+    seed_theta: list[float] = []
+    seed_energies: list[float] = []
 
-    rng = np.random.default_rng(42)
+    rng = np.random.default_rng(rng_seed)
     for seed_idx in range(n_seeds):
-        # Random init in [0, 2π] for gamma, [0, π] for beta
         p0_gamma = rng.uniform(0, 2 * np.pi, size=p)
-        p0_beta  = rng.uniform(0, np.pi,     size=p)
+        p0_beta = rng.uniform(0, np.pi, size=p)
         p0 = np.concatenate([p0_gamma, p0_beta])
 
         history: list[float] = []
@@ -481,24 +541,36 @@ def run_qaoa(
             method="COBYLA",
             options={"maxiter": n_optimizer_steps, "rhobeg": step_size},
         )
+        selected, argmax_k, sel_prob = _decode_selection(
+            result.x, cost_h, mixer_h, N, p, k, device, theta_sh
+        )
+        selected_theta = float(np.sum(theta_sh[selected]))
+        seed_theta.append(selected_theta)
+        seed_energies.append(float(result.fun))
 
         if result.fun < best_energy:
-            best_energy = result.fun
+            best_energy = float(result.fun)
             best_params = result.x
             best_history = history
             best_param_history = param_history
+            best_selected = selected
+            best_argmax_k = argmax_k
+            best_selected_prob = sel_prob
 
         if verbose:
-            print(f"  seed={seed_idx}  E={result.fun:.6f}  evals={len(history)}")
+            print(
+                f"  seed={seed_idx}  E={result.fun:.6f}  evals={len(history)}  "
+                f"theta={selected_theta:.4f}  argmax_k={argmax_k}"
+            )
 
-    # Sample bitstrings from optimal circuit to find selected materials
-    selected = _decode_selection(best_params, cost_h, mixer_h, N, p, k, device)
-    selected_theta = float(np.sum(theta_sh[selected]))
+    selected_theta = float(np.sum(theta_sh[best_selected]))
+    mean_theta = float(np.mean(seed_theta)) if seed_theta else float("nan")
+    std_theta = float(np.std(seed_theta, ddof=1)) if len(seed_theta) > 1 else 0.0
 
     if verbose:
         greedy_indices = classical_greedy(theta_sh, k)
         greedy_total = float(np.sum(theta_sh[greedy_indices]))
-        print(f"\nSelected: {[int(i) for i in selected]}")
+        print(f"\nSelected: {[int(i) for i in best_selected]}")
         print(f"Total theta_SH: {selected_theta:.4f}  (greedy: {greedy_total:.4f})")
 
     return QAOAResult(
@@ -506,12 +578,22 @@ def run_qaoa(
         gamma=best_params[:p],
         beta=best_params[p:],
         energy_history=best_history,
-        selected_indices=selected,
+        selected_indices=best_selected,
         selected_theta_sh=selected_theta,
         p=p,
         n_materials=N,
         k=k,
         param_history=best_param_history,
+        lam=float(lam),
+        n_optimizer_steps=int(n_optimizer_steps),
+        n_evals=len(best_history),
+        rng_seed=int(rng_seed),
+        seed_theta_sh=seed_theta,
+        seed_energies=seed_energies,
+        argmax_k=int(best_argmax_k),
+        selected_prob=float(best_selected_prob),
+        mean_theta_sh=mean_theta,
+        std_theta_sh=std_theta,
     )
 
 
@@ -523,34 +605,44 @@ def _decode_selection(
     p: int,
     k: int,
     device,
-) -> list[int]:
+    theta_sh: np.ndarray,
+) -> tuple[list[int], int, float]:
     """
-    Sample the optimal QAOA circuit and decode the most likely valid selection.
+    Decode the most likely k-set from the optimized circuit.
+
+    Returns
+    -------
+    selected, argmax_k, selected_prob
+        ``argmax_k`` is the Hamming weight of the unconstrained most-likely
+        bitstring (a check that λ is actually enforcing cardinality).
     """
+
     @qp.qnode(device)
     def sample_circuit(params):
         qaoa_circuit(params, cost_h, mixer_h, n_materials, p)
         return qp.probs(wires=range(n_materials))
 
     probs = np.array(sample_circuit(params))
+    top_idx = int(np.argmax(probs))
+    top_bits = np.array(list(np.binary_repr(top_idx, width=n_materials)), dtype=int)
+    argmax_k = int(top_bits.sum())
 
-    # Find the highest-probability bitstring with exactly k ones
     best_prob = -1.0
     best_bits = None
     for idx in np.argsort(probs)[::-1]:
         bits = np.array(list(np.binary_repr(idx, width=n_materials)), dtype=int)
         if bits.sum() == k:
             if probs[idx] > best_prob:
-                best_prob = probs[idx]
+                best_prob = float(probs[idx])
                 best_bits = bits
         if best_bits is not None and probs[idx] < best_prob * 0.01:
-            break  # stop when remaining probs are negligible
+            break
 
     if best_bits is None:
-        # Fallback: greedy selection
-        return list(np.argsort(np.zeros(n_materials))[:k])
+        return classical_greedy(theta_sh, k), argmax_k, 0.0
 
-    return [int(i) for i in np.where(best_bits == 1)[0]]
+    selected = [int(i) for i in np.where(best_bits == 1)[0]]
+    return selected, argmax_k, float(best_prob)
 
 
 # ---------------------------------------------------------------------------
@@ -610,9 +702,9 @@ def classical_simulated_annealing(
         return -float(np.sum(theta_sh[list(sel)]))  # minimize negative = maximize
 
     current_e = energy(selected)
-    best_sel   = set(selected)
-    best_e     = current_e
-    history    = [current_e]
+    best_sel = set(selected)
+    best_e = current_e
+    history = [current_e]
 
     temperatures = np.exp(np.linspace(np.log(T_start), np.log(T_end), n_steps))
 
@@ -620,7 +712,7 @@ def classical_simulated_annealing(
         # Swap one selected for one unselected
         unselected = list(set(range(N)) - selected)
         remove = rng.choice(list(selected))
-        add    = rng.choice(unselected)
+        add = rng.choice(unselected)
         candidate = (selected - {remove}) | {add}
 
         delta = energy(candidate) - current_e
@@ -642,8 +734,218 @@ def classical_simulated_annealing(
 
 
 # ---------------------------------------------------------------------------
-# Utility
+# Hyperparameter sweep (#21)
 # ---------------------------------------------------------------------------
+
+
+def oracle_id(theta_sh: np.ndarray) -> str:
+    """Short fingerprint of the frozen θ_SH vector used as the QAOA oracle."""
+    payload = np.asarray(theta_sh, dtype=np.float64).tobytes()
+    return hashlib.sha256(payload).hexdigest()[:12]
+
+
+def is_published_qaoa_config(
+    *,
+    p: int,
+    lam: float,
+    n_optimizer_steps: int,
+    n_seeds: int,
+    step_size: float,
+    rng_seed: int = NB04_RNG_SEED,
+    k: int = NB04_K,
+) -> bool:
+    """True when a sweep cell matches the committed NB04 QAOA settings."""
+    return (
+        p in NB04_DEPTHS
+        and k == NB04_K
+        and abs(float(lam) - NB04_LAM) < 1e-12
+        and int(n_optimizer_steps) == NB04_OPTIMIZER_STEPS
+        and int(n_seeds) == NB04_N_SEEDS
+        and abs(float(step_size) - NB04_STEP_SIZE) < 1e-12
+        and int(rng_seed) == NB04_RNG_SEED
+    )
+
+
+def run_qaoa_sweep(
+    theta_sh: np.ndarray,
+    k: int = NB04_K,
+    *,
+    formulas: Sequence[str] | None = None,
+    p_values: Sequence[int] = DEFAULT_SWEEP_P,
+    lam_values: Sequence[float] = DEFAULT_SWEEP_LAM,
+    step_values: Sequence[int] = DEFAULT_SWEEP_STEPS,
+    n_seeds: int = NB04_N_SEEDS,
+    step_size: float = NB04_STEP_SIZE,
+    rng_seed: int = NB04_RNG_SEED,
+    verbose: bool = False,
+    oracle_mode: str = "in_sample",
+    on_cell=None,
+) -> QAOASweepResult:
+    """
+    Sweep λ, COBYLA budget, and depth on a *frozen* θ_SH oracle.
+
+    Each grid cell is an independent ``run_qaoa`` call (same ``rng_seed``),
+    so configs are comparable. The published NB04 table is *not* overwritten.
+    """
+    theta_sh = np.asarray(theta_sh, dtype=float)
+    if not p_values or not lam_values or not step_values:
+        raise ValueError("p_values, lam_values, and step_values must be non-empty.")
+
+    greedy_idx = classical_greedy(theta_sh, k)
+    greedy_total = float(np.sum(theta_sh[greedy_idx]))
+    names = (
+        list(formulas)
+        if formulas is not None
+        else [str(i) for i in range(len(theta_sh))]
+    )
+    oid = oracle_id(theta_sh)
+
+    summary: list[dict[str, Any]] = []
+    seeds: list[dict[str, Any]] = []
+    n_cells = len(p_values) * len(lam_values) * len(step_values)
+    cell_i = 0
+    for p, lam, steps in product(p_values, lam_values, step_values):
+        cell_i += 1
+        if verbose:
+            print(
+                f"[{cell_i}/{n_cells}] p={p}  lam={lam:g}  steps={steps}  "
+                f"seeds={n_seeds}",
+                flush=True,
+            )
+        res = run_qaoa(
+            theta_sh,
+            k=k,
+            p=int(p),
+            lam=float(lam),
+            n_optimizer_steps=int(steps),
+            n_seeds=int(n_seeds),
+            step_size=float(step_size),
+            verbose=False,
+            rng_seed=int(rng_seed),
+        )
+        selected_names = [names[i] for i in res.selected_indices]
+        published = is_published_qaoa_config(
+            p=int(p),
+            lam=float(lam),
+            n_optimizer_steps=int(steps),
+            n_seeds=int(n_seeds),
+            step_size=float(step_size),
+            rng_seed=int(rng_seed),
+            k=k,
+        )
+        summary.append(
+            {
+                "p": int(p),
+                "lam": float(lam),
+                "n_optimizer_steps": int(steps),
+                "n_seeds": int(n_seeds),
+                "step_size": float(step_size),
+                "rng_seed": int(rng_seed),
+                "k": int(k),
+                "n_materials": int(res.n_materials),
+                "oracle_mode": oracle_mode,
+                "oracle_id": oid,
+                "best_theta_sh": float(res.selected_theta_sh),
+                "mean_theta_sh": float(res.mean_theta_sh),
+                "std_theta_sh": float(res.std_theta_sh),
+                "min_theta_sh": float(min(res.seed_theta_sh)),
+                "max_theta_sh": float(max(res.seed_theta_sh)),
+                "best_energy": float(res.energy),
+                "n_evals_best": int(res.n_evals),
+                "selected_idx": str([int(i) for i in res.selected_indices]),
+                "selected_formulas": str(selected_names),
+                "greedy_theta_sh": greedy_total,
+                "gap_to_greedy": greedy_total - float(res.selected_theta_sh),
+                "argmax_k": int(res.argmax_k),
+                "valid_argmax": int(res.argmax_k == k),
+                "selected_prob": float(res.selected_prob),
+                "published_config": int(published),
+            }
+        )
+        for seed_idx, (th, en) in enumerate(zip(res.seed_theta_sh, res.seed_energies)):
+            seeds.append(
+                {
+                    "p": int(p),
+                    "lam": float(lam),
+                    "n_optimizer_steps": int(steps),
+                    "seed_idx": int(seed_idx),
+                    "energy": float(en),
+                    "selected_theta_sh": float(th),
+                    "oracle_id": oid,
+                }
+            )
+        if verbose:
+            print(
+                f"    best theta_SH={res.selected_theta_sh:.4f}  "
+                f"gap={greedy_total - res.selected_theta_sh:.4f}  "
+                f"evals={res.n_evals}",
+                flush=True,
+            )
+        if on_cell is not None:
+            on_cell(
+                QAOASweepResult(
+                    summary=summary,
+                    seeds=seeds,
+                    greedy_theta_sh=greedy_total,
+                    greedy_indices=[int(i) for i in greedy_idx],
+                    oracle_id=oid,
+                )
+            )
+    return QAOASweepResult(
+        summary=summary,
+        seeds=seeds,
+        greedy_theta_sh=greedy_total,
+        greedy_indices=[int(i) for i in greedy_idx],
+        oracle_id=oid,
+    )
+
+
+def save_qaoa_sweep(
+    sweep: QAOASweepResult,
+    path: Path | str = DEFAULT_QAOA_SWEEP_CSV,
+    seeds_path: Path | str | None = DEFAULT_QAOA_SWEEP_SEEDS_CSV,
+) -> tuple[Path, Path | None]:
+    """Write summary (and optional per-seed) CSVs."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not sweep.summary:
+        raise ValueError("sweep.summary is empty")
+    with path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=list(sweep.summary[0].keys()),
+            lineterminator="\n",
+        )
+        writer.writeheader()
+        writer.writerows(sweep.summary)
+
+    seeds_out: Path | None = None
+    if seeds_path is not None and sweep.seeds:
+        seeds_out = Path(seeds_path)
+        seeds_out.parent.mkdir(parents=True, exist_ok=True)
+        with seeds_out.open("w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(
+                f,
+                fieldnames=list(sweep.seeds[0].keys()),
+                lineterminator="\n",
+            )
+            writer.writeheader()
+            writer.writerows(sweep.seeds)
+    return path, seeds_out
+
+
+def load_qaoa_sweep(path: Path | str = DEFAULT_QAOA_SWEEP_CSV) -> list[dict[str, str]]:
+    """Load a committed sweep summary CSV."""
+    path = Path(path)
+    with path.open(newline="", encoding="utf-8") as f:
+        return list(csv.DictReader(f))
+
+
+def sweep_best_row(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    """Row with the highest QAOA ``best_theta_sh`` (best-*cost* seed)."""
+    if not rows:
+        raise ValueError("no sweep rows")
+    return max(rows, key=lambda r: float(r["best_theta_sh"]))
 
 
 def qaoa_summary(result: QAOAResult, formulas: list[str] | None = None) -> None:

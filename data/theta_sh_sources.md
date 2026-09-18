@@ -57,7 +57,10 @@ NB04 demonstrates the pipeline
 - **QAOA / greedy / SA:** use `surrogate.qaoa_pool_dataset()` (historical 12
   formulas) so the Hilbert space stays `2^12` and published selection totals
   remain comparable. Oracle weights are `predict_oracle(..., mode='in_sample')`;
-  pool LOOCV RMSE is reported alongside.
+  pool LOOCV RMSE is reported alongside. A λ / budget / depth sweep
+  (`data/qaoa_sweep.csv`) tests whether that ranking is an under-tuned COBYLA
+  setting; it does not replace `data/qaoa_results.csv`. Best sweep cell is
+  θ_SH = 3.570 (p=1, λ=5) vs greedy 4.259 (`best_theta_sh` is the best-cost seed).
 
 The reported totals and selected triples are results on that precise committed
 oracle. They do not establish DFT-computed θ_SH, production materials discovery,
