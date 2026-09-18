@@ -10,6 +10,8 @@ plot_energy_convergence  : Plot VQE energy history for HEA vs MERA
 plot_entanglement_profile: Plot S_vN vs bipartition size
 plot_mutual_info_matrix  : Heatmap of sublattice mutual information
 plot_gradient_variance   : Barren plateau diagnostic plot
+plot_qaoa_landscape      : QAOA p=1 (γ, β) landscape + depth panel
+plot_surrogate_holdout   : Train vs numbered hold-out parity plot (#20)
 """
 
 from __future__ import annotations
@@ -549,6 +551,189 @@ def plot_qaoa_landscape(
         )
     else:
         ax2.axis("off")
+
+    fig.tight_layout()
+    if save_path:
+        fig.savefig(save_path, bbox_inches="tight", dpi=150)
+    return fig
+
+
+# ---------------------------------------------------------------------------
+# Surrogate hold-out parity (#20)
+# ---------------------------------------------------------------------------
+
+# Distinct colors for ≤10 hold-out markers (matched to table rows).
+_HOLDOUT_COLORS = [
+    "#4C78A8", "#F58518", "#54A24B", "#E45756",
+    "#B279A2", "#72B7B2", "#EECA3B", "#9D755D",
+    "#BAB0AC", "#FF9DA6",
+]
+
+
+def _holdout_label_offsets(
+    xs: np.ndarray,
+    ys: np.ndarray,
+    lim_span: float,
+) -> list[tuple[float, float]]:
+    """Fan annotation offsets (points) so numbered labels do not stack."""
+    dirs = [
+        (16, 12), (16, -12), (-18, 12), (-18, -12),
+        (22, 2), (-22, 2), (4, 20), (4, -20),
+        (26, 14), (-26, -14),
+    ]
+    px = 90.0 / max(lim_span, 1e-6)
+    placed: list[tuple[float, float]] = []
+    offsets: list[tuple[float, float]] = []
+    for i, (x, y) in enumerate(zip(xs, ys)):
+        best = dirs[0]
+        best_min = -1.0
+        for dx, dy in dirs:
+            mind = 1e9
+            for j, (pdx, pdy) in enumerate(placed):
+                ddx = (x - xs[j]) * px + dx - pdx
+                ddy = (y - ys[j]) * px + dy - pdy
+                mind = min(mind, float(np.hypot(ddx, ddy)))
+            if i == 0:
+                mind = 100.0
+            if mind > best_min:
+                best_min = mind
+                best = (dx, dy)
+        placed.append(best)
+        offsets.append(best)
+    return offsets
+
+
+def plot_surrogate_holdout(
+    train_true: np.ndarray,
+    train_pred: np.ndarray,
+    hold_true: np.ndarray,
+    hold_pred: np.ndarray,
+    hold_formulas: list[str],
+    *,
+    save_path: str | None = None,
+    title: str = "Surrogate: train vs hold-out (Phase-A corpus)",
+) -> plt.Figure:
+    """
+    Parity plot with numbered hold-out markers matched to a side table.
+
+    Gray circles are training rows (no names — too many to label). Numbered
+    colored diamonds are hold-out materials; the same number appears in the
+    table so each diamond maps to a formula without overlapping text.
+    """
+    from matplotlib.lines import Line2D
+
+    train_true = np.asarray(train_true, dtype=float)
+    train_pred = np.asarray(train_pred, dtype=float)
+    hold_true = np.asarray(hold_true, dtype=float)
+    hold_pred = np.asarray(hold_pred, dtype=float)
+    hold_err = np.abs(hold_pred - hold_true)
+    order = np.argsort(-hold_err)
+
+    fig, (ax, ax_tab) = plt.subplots(
+        1, 2, figsize=(10.4, 5.5), gridspec_kw={"width_ratios": [2.55, 1.0]}
+    )
+
+    ax.scatter(
+        train_true,
+        train_pred,
+        s=55,
+        c="#D9D4DC",
+        edgecolors="white",
+        linewidths=0.5,
+        zorder=3,
+    )
+
+    xs = hold_true[order]
+    ys = hold_pred[order]
+    formulas = [hold_formulas[i] for i in order]
+    colors = [_HOLDOUT_COLORS[k % len(_HOLDOUT_COLORS)] for k in range(len(order))]
+
+    for x, y, color in zip(xs, ys, colors):
+        ax.scatter(
+            [x], [y], s=110, c=color, marker="D",
+            edgecolors="white", linewidths=0.7, zorder=5,
+        )
+
+    all_x = np.concatenate([train_true, hold_true, train_pred, hold_pred])
+    pad = 0.25
+    lo, hi = float(all_x.min()) - pad, float(all_x.max()) + pad
+    ax.plot([lo, hi], [lo, hi], "--", color="#756F6A", lw=1.2, zorder=2)
+    ax.set_xlim(lo, hi)
+    ax.set_ylim(lo, hi)
+
+    offsets = _holdout_label_offsets(xs, ys, hi - lo)
+    for k, (x, y, (dx, dy), color) in enumerate(zip(xs, ys, offsets, colors), start=1):
+        ax.annotate(
+            str(k),
+            (x, y),
+            textcoords="offset points",
+            xytext=(dx, dy),
+            fontsize=10,
+            fontweight="bold",
+            color=color,
+            ha="center",
+            va="center",
+            arrowprops=dict(arrowstyle="-", color=color, lw=0.8, shrinkA=0, shrinkB=3),
+            zorder=6,
+            bbox=dict(
+                boxstyle="circle,pad=0.22",
+                facecolor="white",
+                edgecolor=color,
+                linewidth=1.2,
+            ),
+        )
+
+    ax.set_xlabel(r"Oracle $\theta_{SH}$ (illustrative)", fontsize=12)
+    ax.set_ylabel(r"Surrogate $\theta_{SH}$", fontsize=12)
+    ax.set_title(title, fontsize=13, pad=10)
+    handles = [
+        Line2D(
+            [0], [0], marker="o", color="none", markerfacecolor="#D9D4DC",
+            markeredgecolor="white", markersize=9,
+            label=f"Train (n={len(train_true)}) — used to fit the model",
+        ),
+        Line2D(
+            [0], [0], marker="D", color="none", markerfacecolor="#4C78A8",
+            markeredgecolor="white", markersize=9,
+            label=f"Hold-out (n={len(hold_true)}) — numbered, see table",
+        ),
+        Line2D([0], [0], color="#756F6A", linestyle="--", lw=1.2, label="Perfect prediction"),
+    ]
+    ax.legend(handles=handles, frameon=False, loc="upper left", fontsize=8.5)
+
+    ax_tab.axis("off")
+    ax_tab.set_title("Hold-out key  (# on plot = row)", fontsize=11, pad=10)
+
+    col_labels = ["#", "formula", "oracle", "pred", "|err|"]
+    cell_text = []
+    for k, idx in enumerate(order, start=1):
+        cell_text.append([
+            str(k),
+            formulas[k - 1],
+            f"{hold_true[idx]:+.2f}",
+            f"{hold_pred[idx]:+.2f}",
+            f"{hold_err[idx]:.2f}",
+        ])
+    table = ax_tab.table(
+        cellText=cell_text,
+        colLabels=col_labels,
+        loc="upper center",
+        cellLoc="center",
+    )
+    table.auto_set_font_size(False)
+    table.set_fontsize(8)
+    table.scale(1.15, 1.55)
+    for (r, c), cell in table.get_celld().items():
+        cell.set_edgecolor("#E4E4E4")
+        if r == 0:
+            cell.set_facecolor("#F3F3F3")
+            cell.set_text_props(weight="semibold")
+        elif c == 0:
+            color = colors[r - 1]
+            cell.set_facecolor(color)
+            cell.set_text_props(color="white", weight="bold")
+        elif c == 1:
+            cell.set_facecolor("#F7F7F7")
 
     fig.tight_layout()
     if save_path:

@@ -46,6 +46,7 @@ dev = [
     "jupyterlab",
     "pytest",
     "ruff",
+    "scikit-learn",  # MLP surrogate tests (hold-out / CV) in CI
 ]
 dmrg = [
     "physics-tenpy",

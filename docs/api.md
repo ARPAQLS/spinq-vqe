@@ -191,25 +191,33 @@ from spinq_vqe import surrogate
 | `load_mp_data(api_key)` | Same as fetch, returns dataset only |
 | `save_theta_sh_csv(dataset, path, extra)` | Write CSV after a refresh |
 | `build_features(dataset)` | Extract feature matrix `(N, 6)` |
-| `train_surrogate(dataset, ...)` | Fit sklearn MLP (or numpy ridge fallback) |
+| `train_surrogate(dataset, ..., hold_out_frac=, cv_strategy=)` | Fit Pipeline (scaler+MLP) or ridge; attach train/CV/hold-out metrics |
+| `split_hold_out(dataset, ...)` | Train / hold-out split (fraction or formulas) |
+| `cross_validate_surrogate(dataset, ...)` | Out-of-fold predictions + CV metrics (no scaler leakage) |
 | `predict(surrogate, records)` | Predict θ_SH for new records |
-| `surrogate_summary(surrogate)` | Print model info + CV R² |
+| `predict_oracle(dataset, mode=...)` | QAOA weights: `in_sample`, `loocv`, or `kfold` |
+| `save_surrogate_metrics(metrics, path)` | Persist NB04 evaluation row |
+| `surrogate_summary(surrogate)` | Print train / CV / hold-out summary |
 
 ```python
 ds = surrogate.load_theta_sh_data()       # full Phase-A CSV (≥30)
-sr = surrogate.train_surrogate(ds)        # diversity / CV diagnostics
+sr = surrogate.train_surrogate(           # diversity + hold-out diagnostics
+    ds, hold_out_frac=0.2, cv_strategy="kfold", random_state=0
+)
 pool = surrogate.qaoa_pool_dataset(ds)    # N=12 historical pool
-sr_qaoa = surrogate.train_surrogate(pool)
-theta_sh = surrogate.predict(sr_qaoa, pool.records)
+theta_sh, metrics = surrogate.predict_oracle(pool, mode="in_sample")
+# Optional honesty check: predict_oracle(pool, mode="loocv")
 ```
 
 Refresh CSV (optional, requires `MP_API_KEY` in `.env`):
 
 ```bash
 python scripts/fetch_mp_theta_sh.py
+python scripts/evaluate_surrogate.py   # train / CV / hold-out metrics + figure
 ```
 
-**Optional deps:** `scikit-learn` (MLP), `mp-api` (MP refresh only). Install: `pip install -e ".[data]"`.
+**Optional deps:** `scikit-learn` (MLP; also in `[dev]` so CI tests hold-out / CV),
+`mp-api` (MP refresh only). Install: `pip install -e ".[data]"` or `pip install -e ".[dev]"`.
 
 ---
 
@@ -234,7 +242,8 @@ from spinq_vqe import qaoa
 | `qaoa_summary(result, formulas)` | Print result summary |
 
 ```python
-theta_sh = surrogate.predict(sr, ds.records)
+pool = surrogate.qaoa_pool_dataset(ds)
+theta_sh, _ = surrogate.predict_oracle(pool, mode="in_sample")
 result = qaoa.run_qaoa(theta_sh, k=3, p=2, n_seeds=5, verbose=True)
 # result.selected_indices → best 3 materials
 # result.selected_theta_sh → total θ_SH
@@ -307,5 +316,6 @@ from spinq_vqe import utils
 | `plot_mutual_info_matrix(matrix, ...)` | Sublattice MI heatmap |
 | `plot_gradient_variance(results, ...)` | Barren plateau diagnostic |
 | `plot_qaoa_landscape(gamma, beta, energies, ...)` | NB04 landscape + θ_SH depth panel |
+| `plot_surrogate_holdout(...)` | Train vs numbered hold-out parity plot + matched table |
 
 All plots use a consistent soft pastel palette (`SUBLATTICE_COLORS`, `ANSATZ_COLORS`).

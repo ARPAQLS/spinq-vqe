@@ -33,10 +33,10 @@ Two parallel research threads:
 > [!IMPORTANT]
 > **NB04 scientific scope.** The committed `data/mp_theta_sh.csv` combines
 > Materials Project descriptors with a fixed, illustrative θ_SH oracle (**32**
-> Phase-A materials). Surrogate diagnostics use the full corpus; QAOA / greedy /
-> SA still select **k=3 from a fixed N=12 pool** (`surrogate.qaoa_pool_dataset`)
-> so the Hilbert space stays tractable. Targets reproduce this workflow — they
-> are not row-wise verified measurements. See
+> Phase-A materials). Surrogate diagnostics report train / CV / hold-out metrics;
+> QAOA / greedy / SA still select **k=3 from a fixed N=12 pool** with
+> `oracle=in_sample` (pool LOOCV RMSE reported alongside). Targets reproduce this
+> workflow — they are not row-wise verified measurements. See
 > [`data/theta_sh_sources.md`](data/theta_sh_sources.md) and
 > [`data/theta_sh_provenance.csv`](data/theta_sh_provenance.csv).
 
@@ -56,8 +56,8 @@ spinq-vqe/
 │   └── nqs.py           # NetKet Neural Quantum State baselines (NB07)
 ├── notebooks/           # Executable research notebooks
 ├── figures/             # Generated plots
-├── data/                # ED/VQE/QAOA/DMRG/NQS CSVs, mp_theta_sh.csv, statevectors
-├── scripts/             # Benchmarks + fetch_mp_theta_sh.py
+├── data/                # ED/VQE/QAOA/DMRG/NQS CSVs, mp_theta_sh.csv, surrogate_metrics.csv
+├── scripts/             # Benchmarks, fetch_mp_theta_sh.py, evaluate_surrogate.py
 ├── docs/                # Guides and API reference → docs/README.md
 ├── OVERVIEW.md          # Full program description + research context
 └── REFERENCES.md        # Full bibliography (50+ references)
@@ -79,11 +79,14 @@ conda activate spinq-vqe
 ```
 
 Requires Python ≥ 3.11. Core: `pennylane ≥ 0.39`, `numpy`, `scipy`, `networkx`, `matplotlib`.  
-Optional: `pip install -e ".[data]"` adds `scikit-learn`, `mp-api`, `pandas` (for SOC QAOA notebooks).  
+The `[dev]` extra (install command above) adds pytest, ruff, Jupyter, and `scikit-learn` (surrogate MLP tests).  
+Optional: `pip install -e ".[data]"` adds `mp-api`, `pandas`, `matminer` (Materials Project refresh).  
 Optional: `pip install -e ".[dmrg]"` adds `physics-tenpy` (for DMRG comparison, NB06).  
 Optional: `pip install -e ".[nqs]"` adds `netket` (for Neural Quantum State comparison, NB07).
 
-**SOC QAOA data (NB04):** uses committed `data/mp_theta_sh.csv` (no API key needed). To refresh from Materials Project:
+**SOC QAOA data (NB04):** uses committed `data/mp_theta_sh.csv` (no API key needed).
+Surrogate train/CV/hold-out metrics: `data/surrogate_metrics.csv` (regenerate with
+`python scripts/evaluate_surrogate.py`). To refresh Materials Project descriptors:
 
 ```bash
 cp .env.example .env          # add MP_API_KEY from materialsproject.org/api
@@ -98,7 +101,7 @@ python scripts/fetch_mp_theta_sh.py
 | 01 | [`01_kagome_hamiltonian.ipynb`](notebooks/01_kagome_hamiltonian.ipynb) | lattice, ED baseline, figures |
 | 02 | [`02_vqe_run.ipynb`](notebooks/02_vqe_run.ipynb) | COBYLA seed stats (mean ± std), 9.66% best error, Adam barren plateau |
 | 03 | [`03_entanglement.ipynb`](notebooks/03_entanglement.ipynb) | entropy profile, MI matrix, sublattice correlations |
-| 04 | [`04_soc_qaoa.ipynb`](notebooks/04_soc_qaoa.ipynb) | surrogate MLP, QAOA p=1/2/3, material ranking, landscape diagnostic |
+| 04 | [`04_soc_qaoa.ipynb`](notebooks/04_soc_qaoa.ipynb) | surrogate train/CV/hold-out, QAOA p=1/2/3, ranking, landscape |
 | 05 | [`05_scaling_analysis.ipynb`](notebooks/05_scaling_analysis.ipynb) | N=9/12/18 scaling, gradient variance, barren plateau |
 | 06 | [`06_dmrg_comparison.ipynb`](notebooks/06_dmrg_comparison.ipynb) | TeNPy DMRG vs ED/VQE, χ convergence, entanglement profile |
 | 07 | [`07_nqs_comparison.ipynb`](notebooks/07_nqs_comparison.ipynb) | NetKet NQS (complex RBM / RBMModPhase) vs ED/DMRG/VQE |
@@ -168,6 +171,20 @@ distributions are in `data/vqe_results.csv`, `data/vqe_seeds_n9.csv`, and
 | QAOA p=3 | −0.451 | W, Ta, Pd | Deeper circuit — worse on this oracle |
 | **Greedy (classical)** | **4.259** | **Bi₂Se₃, CrTe₂, Mn₃Sn** | Optimal on surrogate oracle |
 | Sim. annealing | 4.259 | Mn₃Sn, CrTe₂, Bi₂Se₃ | Matches greedy |
+
+Hold-out / CV metrics live in `data/surrogate_metrics.csv` (regenerate with
+`python scripts/evaluate_surrogate.py`). The scatter is a **train vs numbered
+hold-out** diagnostic (not a discovery claim):
+
+| Split | n | RMSE | R² | Notes |
+|-------|---|------|----|-------|
+| Train (in-sample) | 25 | 0.116 | 0.93 | Fit set after 20% hold-out |
+| 5-fold CV | 25 | 0.458 | −0.03 | Leakage-free Pipeline |
+| Hold-out | 7 | 1.200 | 0.08 | W, Pd, MnPt, Bi₂Se₃, Ag, Sb₂Te₃, Mn₃Ga |
+| QAOA pool in-sample | 12 | 0.006 | — | Oracle used for published totals |
+| QAOA pool LOOCV | 12 | 1.71 | — | Honesty check; not the QAOA weights |
+
+<img src="figures/surrogate_predictions.png" alt="Surrogate train vs numbered hold-out" width="720">
 
 <img src="figures/qaoa_material_ranking.png" alt="QAOA material ranking" width="560">
 

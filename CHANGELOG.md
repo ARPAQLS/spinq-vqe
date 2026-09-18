@@ -10,6 +10,11 @@ and this project uses semantic versioning through the package version in
 
 ### Added
 
+- Surrogate hold-out evaluation, leakage-free CV metrics, and `predict_oracle`
+  modes (`in_sample` / `loocv` / `kfold`) with committed `data/surrogate_metrics.csv`
+  (#20).
+- `scripts/evaluate_surrogate.py` and `utils.plot_surrogate_holdout` to regenerate
+  the numbered train/hold-out figure.
 - Phase-A expansion of `data/mp_theta_sh.csv` to **32** illustrative spintronic
   materials with MP descriptors; `data/README.md` and row-level provenance for
   every new row (#19).
@@ -18,6 +23,9 @@ and this project uses semantic versioning through the package version in
 
 ### Changed
 
+- NB04 reports train / CV / hold-out RMSE; QAOA pool keeps `oracle=in_sample` for
+  published continuity and prints pool LOOCV RMSE alongside (#20).
+- `[dev]` extra includes `scikit-learn` so CI runs the MLP hold-out / CV tests (#20).
 - NB04 scope docs: full CSV for surrogate diversity; QAOA/greedy/SA still k=3 from
   the fixed 12-material pool. Provenance contract deliberately keeps
   `illustrative_oracle` (not a generic `literature` tag).

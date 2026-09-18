@@ -15,9 +15,9 @@ Pipeline
 1. ``load_theta_sh_data()``  — load committed CSV (default for NB04)
 2. ``load_mp_data()``        — fetch from Materials Project API (refresh only)
    or ``load_mock_data()``   — offline fallback for unit tests
-2. ``build_features()``     — extract numerical descriptors from raw MP records
-3. ``train_surrogate()``    — fit sklearn MLPRegressor + StandardScaler
-4. ``predict()``            — predict θ_SH for new compositions
+3. ``build_features()``      — extract numerical descriptors from raw MP records
+4. ``train_surrogate()``     — fit sklearn Pipeline (scaler+MLP) + CV / hold-out metrics
+5. ``predict()`` / ``predict_oracle()`` — in-sample or out-of-fold θ_SH oracles
 
 Dependencies
 ------------
@@ -56,14 +56,22 @@ except ImportError:
     MP_API_AVAILABLE = False
 
 try:
-    from sklearn.model_selection import cross_val_score  # type: ignore
+    from sklearn.metrics import r2_score  # type: ignore
+    from sklearn.model_selection import (  # type: ignore
+        KFold,
+        LeaveOneOut,
+        cross_val_predict,
+    )
     from sklearn.neural_network import MLPRegressor  # type: ignore
+    from sklearn.pipeline import Pipeline  # type: ignore
     from sklearn.preprocessing import StandardScaler  # type: ignore
     SKLEARN_AVAILABLE = True
 except ImportError:
     MLPRegressor = None  # type: ignore
     StandardScaler = None  # type: ignore
+    Pipeline = None  # type: ignore
     SKLEARN_AVAILABLE = False
+    r2_score = None  # type: ignore
 
 
 # ---------------------------------------------------------------------------
@@ -123,23 +131,54 @@ class SurrogateDataset:
 
 
 @dataclass
+class SurrogateMetrics:
+    """Train / CV / hold-out diagnostics for a surrogate fit."""
+
+    n_samples: int
+    train_rmse: float = float("nan")
+    train_r2: float = float("nan")
+    cv_rmse: float = float("nan")
+    cv_r2: float = float("nan")
+    cv_strategy: str = "none"
+    """e.g. ``kfold-5``, ``loocv``, or ``none``."""
+    n_hold_out: int = 0
+    hold_out_rmse: float = float("nan")
+    hold_out_r2: float = float("nan")
+    hold_out_formulas: tuple[str, ...] = ()
+    oracle_mode: str = "in_sample"
+    """Oracle policy used for QAOA weights: ``in_sample`` or ``loocv`` / ``kfold``."""
+
+
+@dataclass
 class TrainedSurrogate:
     """Container for a fitted surrogate model."""
 
     model: Any
-    """Fitted sklearn MLPRegressor or numpy ridge model."""
+    """Fitted sklearn MLPRegressor (or Pipeline) or numpy ridge model."""
 
     scaler: Any
-    """Fitted feature scaler (StandardScaler or identity)."""
+    """Fitted feature scaler (StandardScaler or identity). Unused if model is a Pipeline."""
 
     feature_names: list[str]
     """Feature column names (for inspection)."""
 
     cv_r2: float = float("nan")
-    """5-fold cross-validation R² score on training data."""
+    """Cross-validated R² (also mirrored on ``metrics.cv_r2``)."""
 
     sklearn: bool = False
     """True if sklearn MLPRegressor; False if numpy ridge fallback."""
+
+    train_rmse: float = float("nan")
+    """In-sample training RMSE."""
+
+    cv_rmse: float = float("nan")
+    """Cross-validated RMSE (out-of-fold)."""
+
+    metrics: SurrogateMetrics | None = None
+    """Full train / CV / hold-out metric bundle when available."""
+
+    is_pipeline: bool = False
+    """True when ``model`` is an sklearn ``Pipeline`` (scaler + estimator)."""
 
 
 # ---------------------------------------------------------------------------
@@ -536,8 +575,214 @@ def build_features(dataset: SurrogateDataset) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
-# Surrogate model
+# Surrogate model + evaluation
 # ---------------------------------------------------------------------------
+
+DEFAULT_SURROGATE_METRICS_CSV = _REPO_ROOT / "data" / "surrogate_metrics.csv"
+ORACLE_MODES = ("in_sample", "loocv", "kfold")
+
+
+def _rmse(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    return float(np.sqrt(np.mean((np.asarray(y_true) - np.asarray(y_pred)) ** 2)))
+
+
+def _r2(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    y_true = np.asarray(y_true, dtype=float)
+    y_pred = np.asarray(y_pred, dtype=float)
+    ss_res = float(np.sum((y_true - y_pred) ** 2))
+    ss_tot = float(np.sum((y_true - y_true.mean()) ** 2))
+    if ss_tot < 1e-15:
+        return float("nan")
+    return 1.0 - ss_res / ss_tot
+
+
+def _sklearn_pipeline(
+    *,
+    hidden_layer_sizes: tuple[int, ...],
+    max_iter: int,
+    random_state: int,
+    early_stopping: bool,
+) -> Any:
+    return Pipeline([
+        ("scaler", StandardScaler()),
+        (
+            "mlp",
+            MLPRegressor(
+                hidden_layer_sizes=hidden_layer_sizes,
+                activation="relu",
+                solver="adam",
+                max_iter=max_iter,
+                random_state=random_state,
+                early_stopping=early_stopping,
+            ),
+        ),
+    ])
+
+
+def _resolve_cv(
+    n_samples: int, cv_folds: int, strategy: str, random_state: int = 0
+):
+    """Return ``(cv_splitter_or_int, strategy_label)``."""
+    strat = strategy.lower().strip()
+    if strat == "auto":
+        strat = "loocv" if n_samples < 15 else "kfold"
+    if strat == "loocv":
+        if not SKLEARN_AVAILABLE:
+            return max(2, min(n_samples, cv_folds)), "loocv-approx"
+        return LeaveOneOut(), "loocv"
+    if strat == "kfold":
+        folds = max(2, min(cv_folds, n_samples))
+        if n_samples < folds:
+            folds = max(2, n_samples)
+        if SKLEARN_AVAILABLE:
+            return (
+                KFold(n_splits=folds, shuffle=True, random_state=random_state),
+                f"kfold-{folds}",
+            )
+        return folds, f"kfold-{folds}"
+    raise ValueError(f"Unknown CV strategy {strategy!r}; use 'auto', 'kfold', or 'loocv'.")
+
+
+def split_hold_out(
+    dataset: SurrogateDataset,
+    hold_out_frac: float = 0.2,
+    *,
+    hold_out_formulas: Sequence[str] | None = None,
+    random_state: int = 0,
+    min_train: int = 5,
+) -> tuple[SurrogateDataset, SurrogateDataset]:
+    """
+    Split a dataset into train and hold-out sets.
+
+    Parameters
+    ----------
+    dataset : SurrogateDataset
+    hold_out_frac : float
+        Fraction held out when ``hold_out_formulas`` is not given (rounded up,
+        at least 1 when ``n > min_train``).
+    hold_out_formulas : sequence of str, optional
+        Explicit hold-out formulas (aliases resolved like ``filter_by_formulas``).
+    random_state : int
+        RNG seed for fractional splits.
+    min_train : int
+        Minimum training rows required.
+
+    Returns
+    -------
+    train, hold_out : SurrogateDataset
+    """
+    n = dataset.n_samples
+    if n < min_train + 1:
+        raise ValueError(
+            f"Need at least {min_train + 1} samples for a hold-out split, got {n}."
+        )
+
+    if hold_out_formulas is not None:
+        hold = filter_by_formulas(dataset, hold_out_formulas)
+        hold_forms = set(hold.formulas)
+        train_recs = [r for r in dataset.records if r.formula not in hold_forms]
+        if len(train_recs) < min_train:
+            raise ValueError(
+                f"Hold-out left only {len(train_recs)} train rows "
+                f"(need ≥{min_train})."
+            )
+        if not hold.records:
+            raise ValueError("Hold-out formula list matched no records.")
+        return SurrogateDataset(records=train_recs), hold
+
+    rng = np.random.default_rng(random_state)
+    n_hold = max(1, int(np.ceil(n * hold_out_frac)))
+    if n - n_hold < min_train:
+        n_hold = n - min_train
+    if n_hold < 1:
+        raise ValueError(
+            f"hold_out_frac={hold_out_frac} leaves fewer than {min_train} train rows."
+        )
+    idx = rng.permutation(n)
+    hold_idx = set(int(i) for i in idx[:n_hold])
+    hold_recs = [dataset.records[i] for i in range(n) if i in hold_idx]
+    train_recs = [dataset.records[i] for i in range(n) if i not in hold_idx]
+    return SurrogateDataset(records=train_recs), SurrogateDataset(records=hold_recs)
+
+
+def _ridge_fit_predict(
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    X_test: np.ndarray,
+    lam: float = 1e-3,
+) -> np.ndarray:
+    mu = X_train.mean(axis=0)
+    sigma = X_train.std(axis=0) + 1e-8
+    Xs = (X_train - mu) / sigma
+    w = np.linalg.solve(Xs.T @ Xs + lam * np.eye(Xs.shape[1]), Xs.T @ y_train)
+    return ((X_test - mu) / sigma) @ w
+
+
+def _cross_val_predict_ridge(
+    X: np.ndarray,
+    y: np.ndarray,
+    n_splits: int,
+) -> np.ndarray:
+    n = len(y)
+    folds = max(2, min(n_splits, n))
+    # Deterministic contiguous folds for the numpy fallback.
+    indices = np.arange(n)
+    fold_ids = np.array_split(indices, folds)
+    preds = np.empty(n, dtype=float)
+    for fold in fold_ids:
+        test = np.asarray(fold, dtype=int)
+        train = np.setdiff1d(indices, test, assume_unique=False)
+        preds[test] = _ridge_fit_predict(X[train], y[train], X[test])
+    return preds
+
+
+def cross_validate_surrogate(
+    dataset: SurrogateDataset,
+    *,
+    hidden_layer_sizes: tuple[int, ...] = (64, 32),
+    max_iter: int = 2000,
+    random_state: int = 42,
+    cv_folds: int = 5,
+    cv_strategy: str = "auto",
+) -> tuple[np.ndarray, SurrogateMetrics]:
+    """
+    Out-of-fold predictions and CV metrics (no train/test leakage).
+
+    Uses an sklearn ``Pipeline(StandardScaler, MLPRegressor)`` so scaling is
+    fit inside each fold. Falls back to numpy ridge with manual folds.
+    """
+    X = build_features(dataset)
+    y = dataset.theta_sh_values
+    n = len(y)
+    if n < 4:
+        raise ValueError(f"Need at least 4 samples for CV, got {n}.")
+
+    cv, label = _resolve_cv(n, cv_folds, cv_strategy, random_state)
+
+    if SKLEARN_AVAILABLE:
+        pipe = _sklearn_pipeline(
+            hidden_layer_sizes=hidden_layer_sizes,
+            max_iter=max_iter,
+            random_state=random_state,
+            early_stopping=False,  # avoid nested validation inside CV
+        )
+        oof = cross_val_predict(pipe, X, y, cv=cv)
+        # Fresh clone metrics via scoring helpers on OOF predictions
+        cv_rmse = _rmse(y, oof)
+        cv_r2 = float(r2_score(y, oof)) if SKLEARN_AVAILABLE else _r2(y, oof)
+    else:
+        n_splits = int(cv) if isinstance(cv, int) else cv_folds
+        oof = _cross_val_predict_ridge(X, y, n_splits)
+        cv_rmse = _rmse(y, oof)
+        cv_r2 = _r2(y, oof)
+
+    metrics = SurrogateMetrics(
+        n_samples=n,
+        cv_rmse=cv_rmse,
+        cv_r2=cv_r2,
+        cv_strategy=label,
+    )
+    return oof, metrics
 
 
 def train_surrogate(
@@ -546,94 +791,186 @@ def train_surrogate(
     max_iter: int = 2000,
     random_state: int = 42,
     cv_folds: int = 5,
+    cv_strategy: str = "auto",
+    hold_out_frac: float | None = None,
+    hold_out_formulas: Sequence[str] | None = None,
+    compute_cv: bool = True,
 ) -> TrainedSurrogate:
     """
     Train an MLP surrogate on θ_SH from the dataset.
 
-    If scikit-learn is available, uses ``MLPRegressor``.
-    Falls back to numpy ridge regression otherwise.
+    If scikit-learn is available, uses a ``Pipeline(StandardScaler, MLPRegressor)``
+    so inference applies the same scaling as training. Falls back to numpy ridge
+    otherwise.
+
+    Cross-validation uses out-of-fold predictions (no scaler leakage). Optional
+    hold-out evaluation trains only on the train split and scores the held-out
+    rows separately; the returned model is the **train-split** fit when hold-out
+    is requested.
 
     Parameters
     ----------
     dataset : SurrogateDataset
-    hidden_layer_sizes : tuple of int
-        MLP hidden layer sizes. Default (64, 32) is sufficient for this problem.
-    max_iter : int
-        Maximum MLP training iterations.
-    random_state : int
+    hidden_layer_sizes, max_iter, random_state
+        MLP hyperparameters.
     cv_folds : int
-        Number of cross-validation folds for R² reporting.
+        K for k-fold when ``cv_strategy`` is ``kfold`` or ``auto`` with n≥15.
+    cv_strategy : {'auto', 'kfold', 'loocv'}
+        ``auto`` → LOOCV for n<15, else 5-fold (or ``cv_folds``).
+    hold_out_frac, hold_out_formulas
+        Optional hold-out split for generalization metrics.
+    compute_cv : bool
+        If True, attach CV metrics (slightly more compute).
 
     Returns
     -------
     TrainedSurrogate
     """
-    X = build_features(dataset)
-    y = dataset.theta_sh_values
+    hold_metrics_extra: dict[str, Any] = {}
+    train_ds = dataset
+    if hold_out_frac is not None or hold_out_formulas is not None:
+        frac = 0.2 if hold_out_frac is None else hold_out_frac
+        train_ds, hold_ds = split_hold_out(
+            dataset,
+            hold_out_frac=frac,
+            hold_out_formulas=hold_out_formulas,
+            random_state=random_state,
+        )
+        hold_metrics_extra = {
+            "n_hold_out": hold_ds.n_samples,
+            "hold_out_formulas": tuple(hold_ds.formulas),
+            "_hold_ds": hold_ds,
+        }
 
-    if len(dataset.records) < 4:
+    if train_ds.n_samples < 4:
         raise ValueError(
-            f"Need at least 4 samples to train a surrogate, got {len(dataset.records)}."
+            f"Need at least 4 samples to train a surrogate, got {train_ds.n_samples}."
+        )
+
+    X = build_features(train_ds)
+    y = train_ds.theta_sh_values
+
+    cv_bundle: SurrogateMetrics | None = None
+    if compute_cv:
+        _, cv_bundle = cross_validate_surrogate(
+            train_ds,
+            hidden_layer_sizes=hidden_layer_sizes,
+            max_iter=max_iter,
+            random_state=random_state,
+            cv_folds=cv_folds,
+            cv_strategy=cv_strategy,
         )
 
     if SKLEARN_AVAILABLE:
-        scaler = StandardScaler()
-        X_scaled = scaler.fit_transform(X)
-
-        # early_stopping needs an internal validation split; disable for small datasets
-        use_early_stopping = len(dataset.records) >= 30
-
-        model = MLPRegressor(
+        # Final fit: early stopping only when enough data and no hold-out
+        # (hold-out already provides an external check).
+        use_early_stopping = (
+            train_ds.n_samples >= 30 and hold_out_frac is None and hold_out_formulas is None
+        )
+        pipe = _sklearn_pipeline(
             hidden_layer_sizes=hidden_layer_sizes,
-            activation="relu",
-            solver="adam",
             max_iter=max_iter,
             random_state=random_state,
             early_stopping=use_early_stopping,
         )
-        model.fit(X_scaled, y)
+        pipe.fit(X, y)
+        train_pred = pipe.predict(X)
+        train_rmse = _rmse(y, train_pred)
+        train_r2 = float(r2_score(y, train_pred))
 
-        cv_r2 = float("nan")
-        min_cv_samples = cv_folds * 4  # need enough per fold for reliable CV
-        if len(dataset.records) >= min_cv_samples:
-            scores = cross_val_score(model, X_scaled, y, cv=cv_folds, scoring="r2")
-            cv_r2 = float(scores.mean())
+        hold_rmse = float("nan")
+        hold_r2 = float("nan")
+        if "_hold_ds" in hold_metrics_extra:
+            hold_ds = hold_metrics_extra.pop("_hold_ds")
+            hp = pipe.predict(build_features(hold_ds))
+            hold_rmse = _rmse(hold_ds.theta_sh_values, hp)
+            hold_r2 = float(r2_score(hold_ds.theta_sh_values, hp))
 
+        metrics = SurrogateMetrics(
+            n_samples=train_ds.n_samples,
+            train_rmse=train_rmse,
+            train_r2=train_r2,
+            cv_rmse=cv_bundle.cv_rmse if cv_bundle else float("nan"),
+            cv_r2=cv_bundle.cv_r2 if cv_bundle else float("nan"),
+            cv_strategy=cv_bundle.cv_strategy if cv_bundle else "none",
+            n_hold_out=hold_metrics_extra.get("n_hold_out", 0),
+            hold_out_rmse=hold_rmse,
+            hold_out_r2=hold_r2,
+            hold_out_formulas=hold_metrics_extra.get("hold_out_formulas", ()),
+            oracle_mode="in_sample",
+        )
         return TrainedSurrogate(
-            model=model, scaler=scaler, feature_names=FEATURE_NAMES,
-            cv_r2=cv_r2, sklearn=True,
+            model=pipe,
+            scaler=pipe.named_steps["scaler"],
+            feature_names=FEATURE_NAMES,
+            cv_r2=metrics.cv_r2,
+            sklearn=True,
+            train_rmse=train_rmse,
+            cv_rmse=metrics.cv_rmse,
+            metrics=metrics,
+            is_pipeline=True,
         )
 
-    else:
-        warnings.warn(
-            "scikit-learn not installed. Falling back to numpy ridge regression. "
-            "Install scikit-learn for better surrogate quality: pip install scikit-learn"
-        )
-        # Numpy ridge regression fallback
-        mu = X.mean(axis=0)
-        sigma = X.std(axis=0) + 1e-8
-        X_scaled = (X - mu) / sigma
+    warnings.warn(
+        "scikit-learn not installed. Falling back to numpy ridge regression. "
+        "Install scikit-learn for better surrogate quality: pip install scikit-learn",
+        stacklevel=2,
+    )
+    mu = X.mean(axis=0)
+    sigma = X.std(axis=0) + 1e-8
+    X_scaled = (X - mu) / sigma
+    lam = 1e-3
+    w = np.linalg.solve(X_scaled.T @ X_scaled + lam * np.eye(X_scaled.shape[1]), X_scaled.T @ y)
 
-        # Ridge: (XᵀX + λI)⁻¹ Xᵀy
-        lam = 1e-3
-        XtX = X_scaled.T @ X_scaled
-        w = np.linalg.solve(XtX + lam * np.eye(X_scaled.shape[1]), X_scaled.T @ y)
+    class _RidgeModel:
+        def __init__(self, w, mu, sigma):
+            self.w, self.mu, self.sigma = w, mu, sigma
 
-        class _RidgeModel:
-            def __init__(self, w, mu, sigma):
-                self.w, self.mu, self.sigma = w, mu, sigma
-            def predict(self, X_new):
-                return ((X_new - self.mu) / self.sigma) @ self.w
+        def predict(self, X_new):
+            return ((X_new - self.mu) / self.sigma) @ self.w
 
-        model = _RidgeModel(w, mu, sigma)
+    model = _RidgeModel(w, mu, sigma)
 
-        class _IdentityScaler:
-            def transform(self, X): return X
+    class _IdentityScaler:
+        def transform(self, X):
+            return X
 
-        return TrainedSurrogate(
-            model=model, scaler=_IdentityScaler(),
-            feature_names=FEATURE_NAMES, cv_r2=float("nan"), sklearn=False,
-        )
+    train_pred = model.predict(X)
+    train_rmse = _rmse(y, train_pred)
+    train_r2 = _r2(y, train_pred)
+
+    hold_rmse = float("nan")
+    hold_r2 = float("nan")
+    if "_hold_ds" in hold_metrics_extra:
+        hold_ds = hold_metrics_extra.pop("_hold_ds")
+        hp = model.predict(build_features(hold_ds))
+        hold_rmse = _rmse(hold_ds.theta_sh_values, hp)
+        hold_r2 = _r2(hold_ds.theta_sh_values, hp)
+
+    metrics = SurrogateMetrics(
+        n_samples=train_ds.n_samples,
+        train_rmse=train_rmse,
+        train_r2=train_r2,
+        cv_rmse=cv_bundle.cv_rmse if cv_bundle else float("nan"),
+        cv_r2=cv_bundle.cv_r2 if cv_bundle else float("nan"),
+        cv_strategy=cv_bundle.cv_strategy if cv_bundle else "none",
+        n_hold_out=hold_metrics_extra.get("n_hold_out", 0),
+        hold_out_rmse=hold_rmse,
+        hold_out_r2=hold_r2,
+        hold_out_formulas=hold_metrics_extra.get("hold_out_formulas", ()),
+        oracle_mode="in_sample",
+    )
+    return TrainedSurrogate(
+        model=model,
+        scaler=_IdentityScaler(),
+        feature_names=FEATURE_NAMES,
+        cv_r2=metrics.cv_r2,
+        sklearn=False,
+        train_rmse=train_rmse,
+        cv_rmse=metrics.cv_rmse,
+        metrics=metrics,
+        is_pipeline=False,
+    )
 
 
 def predict(
@@ -655,15 +992,130 @@ def predict(
     """
     dataset = SurrogateDataset(records=records)
     X = build_features(dataset)
+    if surrogate.is_pipeline:
+        return np.asarray(surrogate.model.predict(X), dtype=float)
     if surrogate.sklearn:
         X_scaled = surrogate.scaler.transform(X)
-        return surrogate.model.predict(X_scaled)
-    else:
-        return surrogate.model.predict(X)
+        return np.asarray(surrogate.model.predict(X_scaled), dtype=float)
+    return np.asarray(surrogate.model.predict(X), dtype=float)
+
+
+def predict_oracle(
+    dataset: SurrogateDataset,
+    mode: str = "in_sample",
+    *,
+    hidden_layer_sizes: tuple[int, ...] = (64, 32),
+    max_iter: int = 2000,
+    random_state: int = 42,
+    cv_folds: int = 5,
+) -> tuple[np.ndarray, SurrogateMetrics]:
+    """
+    Build θ_SH oracle weights for QAOA / greedy / SA.
+
+    Modes
+    -----
+    ``in_sample``
+        Fit on all rows, predict the same rows (pipeline debugging; default for
+        published NB04 QAOA continuity).
+    ``loocv`` / ``kfold``
+        Out-of-fold predictions — a more honest oracle when generalization matters.
+    """
+    mode_norm = mode.lower().strip()
+    if mode_norm not in ORACLE_MODES:
+        raise ValueError(f"mode must be one of {ORACLE_MODES}, got {mode!r}")
+
+    if mode_norm == "in_sample":
+        sr = train_surrogate(
+            dataset,
+            hidden_layer_sizes=hidden_layer_sizes,
+            max_iter=max_iter,
+            random_state=random_state,
+            cv_folds=cv_folds,
+            cv_strategy="auto",
+            compute_cv=True,
+        )
+        preds = predict(sr, dataset.records)
+        metrics = sr.metrics or SurrogateMetrics(n_samples=dataset.n_samples)
+        metrics.oracle_mode = "in_sample"
+        return preds, metrics
+
+    strategy = "loocv" if mode_norm == "loocv" else "kfold"
+    oof, metrics = cross_validate_surrogate(
+        dataset,
+        hidden_layer_sizes=hidden_layer_sizes,
+        max_iter=max_iter,
+        random_state=random_state,
+        cv_folds=cv_folds,
+        cv_strategy=strategy,
+    )
+    # Attach train metrics from a full in-sample fit for comparison
+    sr = train_surrogate(
+        dataset,
+        hidden_layer_sizes=hidden_layer_sizes,
+        max_iter=max_iter,
+        random_state=random_state,
+        compute_cv=False,
+    )
+    metrics.train_rmse = sr.train_rmse
+    metrics.train_r2 = sr.metrics.train_r2 if sr.metrics else float("nan")
+    metrics.oracle_mode = mode_norm
+    return oof, metrics
+
+
+def save_surrogate_metrics(
+    metrics: SurrogateMetrics,
+    path: Path | str = DEFAULT_SURROGATE_METRICS_CSV,
+    *,
+    extra: dict[str, Any] | None = None,
+) -> Path:
+    """Write a one-row (plus optional extras) metrics CSV for NB04 reproducibility."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    row = {
+        "n_samples": metrics.n_samples,
+        "train_rmse": f"{metrics.train_rmse:.6f}" if np.isfinite(metrics.train_rmse) else "",
+        "train_r2": f"{metrics.train_r2:.6f}" if np.isfinite(metrics.train_r2) else "",
+        "cv_rmse": f"{metrics.cv_rmse:.6f}" if np.isfinite(metrics.cv_rmse) else "",
+        "cv_r2": f"{metrics.cv_r2:.6f}" if np.isfinite(metrics.cv_r2) else "",
+        "cv_strategy": metrics.cv_strategy,
+        "n_hold_out": metrics.n_hold_out,
+        "hold_out_rmse": (
+            f"{metrics.hold_out_rmse:.6f}" if np.isfinite(metrics.hold_out_rmse) else ""
+        ),
+        "hold_out_r2": (
+            f"{metrics.hold_out_r2:.6f}" if np.isfinite(metrics.hold_out_r2) else ""
+        ),
+        "hold_out_formulas": ";".join(metrics.hold_out_formulas),
+        "oracle_mode": metrics.oracle_mode,
+    }
+    if extra:
+        for k, v in extra.items():
+            row[k] = v
+    with path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=list(row.keys()))
+        writer.writeheader()
+        writer.writerow(row)
+    return path
 
 
 def surrogate_summary(surrogate: TrainedSurrogate) -> None:
-    """Print a one-line summary of the trained surrogate."""
+    """Print train / CV / hold-out metrics for a trained surrogate."""
     kind = "sklearn MLP" if surrogate.sklearn else "numpy ridge"
-    r2_str = f"{surrogate.cv_r2:.3f}" if not np.isnan(surrogate.cv_r2) else "n/a"
-    print(f"Surrogate: {kind}  |  features: {len(surrogate.feature_names)}  |  CV R²: {r2_str}")
+    m = surrogate.metrics
+    cv_r2 = m.cv_r2 if m else surrogate.cv_r2
+    cv_rmse = m.cv_rmse if m else surrogate.cv_rmse
+    train_rmse = m.train_rmse if m else surrogate.train_rmse
+    strat = m.cv_strategy if m else "n/a"
+    r2_str = f"{cv_r2:.3f}" if np.isfinite(cv_r2) else "n/a"
+    cv_rmse_str = f"{cv_rmse:.4f}" if np.isfinite(cv_rmse) else "n/a"
+    train_str = f"{train_rmse:.4f}" if np.isfinite(train_rmse) else "n/a"
+    print(
+        f"Surrogate: {kind}  |  features: {len(surrogate.feature_names)}  |  "
+        f"train RMSE: {train_str}  |  CV RMSE: {cv_rmse_str} ({strat})  |  CV R²: {r2_str}"
+    )
+    if m and m.n_hold_out:
+        ho = f"{m.hold_out_rmse:.4f}" if np.isfinite(m.hold_out_rmse) else "n/a"
+        print(
+            f"  hold-out: n={m.n_hold_out}  RMSE={ho}  "
+            f"formulas={list(m.hold_out_formulas)}"
+        )

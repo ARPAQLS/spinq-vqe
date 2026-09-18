@@ -50,14 +50,19 @@ NB04 demonstrates the pipeline
 
 `32-row illustrative corpus → surrogate diagnostics → k=3 QAOA on a fixed N=12 pool`.
 
-- **Surrogate section:** trains on the full Phase-A CSV (diversity / CV-ready).
+- **Surrogate section:** trains on the full Phase-A CSV with **train / CV / hold-out**
+  metrics (`hold_out_frac=0.2`; see `data/surrogate_metrics.csv` and
+  `figures/surrogate_predictions.png`). The numbered hold-out set is a
+  generalization diagnostic, not a discovery claim.
 - **QAOA / greedy / SA:** use `surrogate.qaoa_pool_dataset()` (historical 12
   formulas) so the Hilbert space stays `2^12` and published selection totals
-  remain comparable.
+  remain comparable. Oracle weights are `predict_oracle(..., mode='in_sample')`;
+  pool LOOCV RMSE is reported alongside.
 
 The reported totals and selected triples are results on that precise committed
 oracle. They do not establish DFT-computed θ_SH, production materials discovery,
 a transferable ML model, a global physical optimum, or quantum advantage.
 
-If a target is replaced with a sourced value, the surrogate fit, classical
-baselines, QAOA runs, tables, and figures must be regenerated together.
+If a target is replaced with a sourced value, the surrogate fit, hold-out
+metrics, classical baselines, QAOA runs, tables, and figures must be regenerated
+together (`python scripts/evaluate_surrogate.py` plus NB04).
