@@ -32,11 +32,11 @@ The pipeline builds the lattice graph (NetworkX), maps spin operators to Pauli s
 
 ### SOC material screening via QAOA
 
-The spin Hall angle (θ_SH) is the figure of merit for spin-orbit torque efficiency. Selecting the top-k materials from N candidates is a combinatorial optimization problem, solved here with **QAOA** using a classical **MLP surrogate** as the oracle (trained on a 12-material dataset in `data/mp_theta_sh.csv`; optional refresh via Materials Project API).
+The spin Hall angle (θ_SH) is the figure of merit for spin-orbit torque efficiency. Selecting the top-k materials from N candidates is a combinatorial optimization problem, solved here with **QAOA** using a classical **MLP surrogate** as the oracle (Phase-A corpus: **32** materials in `data/mp_theta_sh.csv`; optional refresh via Materials Project API).
 
-Materials Project supplies the structure metadata, while the θ_SH targets are a fixed illustrative oracle (`illustrative_oracle` in `data/mp_theta_sh.csv`). NB04 is a reproducibility and method-demonstration workflow on the committed 12-material surrogate oracle rather than a new material-discovery claim.
+Materials Project supplies the structure metadata, while the θ_SH targets are a fixed illustrative oracle (`illustrative_oracle` in `data/mp_theta_sh.csv`). NB04 trains surrogate diagnostics on the full corpus and runs QAOA / greedy / SA on a **fixed historical N=12 pool** — a reproducibility and method-demonstration workflow, not a materials-discovery claim.
 
-**Decisions made in this release:** classical surrogate oracle (not raw DFT per evaluation); QAOA depths p = 1, 2, 3 compared against greedy and simulated-annealing baselines; k = 3 selected from N = 12 materials; p=1 (γ, β) landscape and depth-sensitivity plot (`figures/qaoa_landscape.png`) show that shallow QAOA can stall in a suboptimal basin while classical baselines reach the global optimum.
+**Decisions made in this release:** classical surrogate oracle (not raw DFT per evaluation); QAOA depths p = 1, 2, 3 compared against greedy and simulated-annealing baselines; k = 3 selected from N = 12 pool materials (full CSV is larger for diversity); p=1 (γ, β) landscape and depth-sensitivity plot (`figures/qaoa_landscape.png`) show that shallow QAOA can stall in a suboptimal basin while classical baselines reach the global optimum.
 
 ---
 
@@ -118,7 +118,7 @@ Full bibliography: [`REFERENCES.md`](REFERENCES.md) (50+ entries).
 
 - **DMRG comparison** — benchmark VQE against density-matrix renormalization group at larger system sizes
 - **NQS comparison** — NetKet Neural Quantum State baselines (complex RBM / RBMModPhase) on the same strip Hamiltonian
-- **Expand θ_SH dataset** — add materials or refresh descriptors via `scripts/fetch_mp_theta_sh.py`
+- **Expand θ_SH dataset** — Phase A (32 rows) landed; later phases may add sourced_primary audits or further diversity via `scripts/fetch_mp_theta_sh.py`
 - **2D periodic Kagome tiling** — extend beyond the 1D strip geometry
 - **Paper draft** — LaTeX manuscript targeting Physical Review B or npj Quantum Materials
 
@@ -152,4 +152,4 @@ Zenodo concept DOI: [10.5281/zenodo.21628505](https://doi.org/10.5281/zenodo.216
 
 ## SOC QAOA provenance boundary
 
-The SOC notebook is a workflow benchmark on a fixed illustrative oracle: 12 committed targets are fitted in-sample by the surrogate and used to select `k=3` candidates. The totals in the tables and figures are objective values on that oracle, not verified material constants. `data/theta_sh_sources.md` defines the status contract and `data/theta_sh_provenance.csv` binds every oracle row to either primary evidence or an explicit illustrative status. Replacing any target requires regenerating the surrogate, classical baselines, QAOA runs, tables, and figures together.
+The SOC notebook is a workflow benchmark on a fixed illustrative oracle: a Phase-A corpus of 32 committed targets supports surrogate diagnostics; QAOA selects `k=3` from a fixed N=12 pool. The totals in the tables and figures are objective values on that pool oracle, not verified material constants. `data/theta_sh_sources.md` defines the status contract and `data/theta_sh_provenance.csv` binds every oracle row to either primary evidence or an explicit illustrative status. Replacing any target requires regenerating the surrogate, classical baselines, QAOA runs, tables, and figures together.

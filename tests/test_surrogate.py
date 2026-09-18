@@ -11,19 +11,22 @@ import numpy as np
 import pytest
 
 from spinq_vqe.surrogate import (
+    DEFAULT_THETA_SH_CSV,
     FEATURE_NAMES,
+    MIN_CURATED_N,
+    QAOA_POOL_SIZE,
     MaterialRecord,
     SurrogateDataset,
     TrainedSurrogate,
-    DEFAULT_THETA_SH_CSV,
     build_features,
+    filter_by_formulas,
     load_mock_data,
     load_theta_sh_csv,
     load_theta_sh_data,
     predict,
+    qaoa_pool_dataset,
     train_surrogate,
 )
-
 
 # ---------------------------------------------------------------------------
 # Data loading
@@ -35,9 +38,10 @@ class TestLoadMockData:
         ds = load_mock_data()
         assert isinstance(ds, SurrogateDataset)
 
-    def test_has_12_records(self):
+    def test_has_phase_a_records(self):
         ds = load_mock_data()
-        assert ds.n_samples == 12
+        assert ds.n_samples >= MIN_CURATED_N
+        assert ds.n_samples >= QAOA_POOL_SIZE
 
     def test_records_are_material_records(self):
         ds = load_mock_data()
@@ -57,7 +61,7 @@ class TestLoadMockData:
         ds = load_mock_data()
         vals = ds.theta_sh_values
         assert isinstance(vals, np.ndarray)
-        assert len(vals) == 12
+        assert len(vals) == ds.n_samples
 
     def test_source_is_mock(self):
         ds = load_mock_data()
@@ -69,9 +73,16 @@ class TestLoadThetaShCsv:
     def test_csv_exists(self):
         assert DEFAULT_THETA_SH_CSV.is_file()
 
-    def test_loads_12_records(self):
+    def test_loads_phase_a_records(self):
         ds = load_theta_sh_csv()
-        assert ds.n_samples == 12
+        assert ds.n_samples >= MIN_CURATED_N
+
+    def test_historical_pool_formulas_preserved(self):
+        ds = load_theta_sh_csv()
+        pool = qaoa_pool_dataset(ds)
+        assert pool.n_samples == QAOA_POOL_SIZE
+        assert "Mn3Sn" in pool.formulas
+        assert "Bi2Se3" in pool.formulas
 
     def test_mn3sn_present_with_real_mp_id(self):
         ds = load_theta_sh_csv()
@@ -81,8 +92,35 @@ class TestLoadThetaShCsv:
 
     def test_load_theta_sh_data_uses_csv(self):
         ds = load_theta_sh_data()
-        assert ds.n_samples == 12
+        assert ds.n_samples >= MIN_CURATED_N
         assert ds.records[0].source in ("csv", "mp_api")
+
+
+class TestQaoaPool:
+    def test_pool_size(self):
+        ds = load_theta_sh_csv()
+        pool = qaoa_pool_dataset(ds)
+        assert pool.n_samples == QAOA_POOL_SIZE
+
+    def test_filter_aliases(self):
+        ds = load_theta_sh_csv()
+        subset = filter_by_formulas(ds, ["Co2MnGa", "IrMn3", "MoTe2"])
+        assert len(subset.records) == 3
+        assert {r.formula for r in subset.records} == {"MnGaCo2", "Mn3Ir", "Te2Mo"}
+
+    def test_pool_only_surrogate_keeps_greedy_leaders(self):
+        """N=12 MLP in-sample fit should still rank Bi2Se3 / CrTe2 / Mn3Sn highly."""
+        pytest.importorskip("sklearn")
+        from spinq_vqe import qaoa
+
+        pool = qaoa_pool_dataset(load_theta_sh_csv())
+        sr = train_surrogate(
+            pool, hidden_layer_sizes=(64, 32), max_iter=3000, random_state=42
+        )
+        assert sr.sklearn
+        pred = predict(sr, pool.records)
+        chosen = [pool.records[i].formula for i in qaoa.classical_greedy(pred, k=3)]
+        assert set(chosen) == {"Bi2Se3", "CrTe2", "Mn3Sn"}
 
 
 # ---------------------------------------------------------------------------
@@ -195,3 +233,4 @@ def test_committed_theta_sh_provenance_contract():
     assert {row["mp_id"] for row in oracle_rows} == {
         row["mp_id"] for row in provenance_rows
     }
+    assert len(oracle_rows) >= 30

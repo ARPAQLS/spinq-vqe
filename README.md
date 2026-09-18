@@ -32,12 +32,13 @@ Two parallel research threads:
 
 > [!IMPORTANT]
 > **NB04 scientific scope.** The committed `data/mp_theta_sh.csv` combines
-> Materials Project descriptors with a fixed, illustrative θ_SH oracle. Its 12
-> target values reproduce the `k=3` surrogate/QAOA workflow; they are not a
-> row-wise set of verified measurements. The notebook demonstrates an optimizer
-> comparison on this committed oracle, not materials discovery or quantum
-> advantage. See [`data/theta_sh_sources.md`](data/theta_sh_sources.md) and the
-> machine-readable [`data/theta_sh_provenance.csv`](data/theta_sh_provenance.csv).
+> Materials Project descriptors with a fixed, illustrative θ_SH oracle (**32**
+> Phase-A materials). Surrogate diagnostics use the full corpus; QAOA / greedy /
+> SA still select **k=3 from a fixed N=12 pool** (`surrogate.qaoa_pool_dataset`)
+> so the Hilbert space stays tractable. Targets reproduce this workflow — they
+> are not row-wise verified measurements. See
+> [`data/theta_sh_sources.md`](data/theta_sh_sources.md) and
+> [`data/theta_sh_provenance.csv`](data/theta_sh_provenance.csv).
 
 ## Structure
 

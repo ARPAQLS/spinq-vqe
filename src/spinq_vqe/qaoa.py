@@ -635,7 +635,7 @@ def classical_simulated_annealing(
             history.append(current_e)
 
     return {
-        "selected_indices": sorted(best_sel),
+        "selected_indices": sorted(int(i) for i in best_sel),
         "total": -best_e,
         "energy_history": history,
     }

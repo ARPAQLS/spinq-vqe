@@ -47,13 +47,15 @@ def main() -> None:
     warnings.filterwarnings("ignore")
 
     ds = surrogate.load_theta_sh_data()
+    pool = surrogate.qaoa_pool_dataset(ds)
+    # Fit on the N=12 QAOA pool so landscape/totals stay comparable to NB04.
     sr = surrogate.train_surrogate(
-        ds,
+        pool,
         hidden_layer_sizes=(64, 32),
         max_iter=3000,
         random_state=42,
     )
-    theta_oracle = surrogate.predict(sr, ds.records)
+    theta_oracle = surrogate.predict(sr, pool.records)
 
     print("Sampling p=1 (gamma, beta) landscape...")
     landscape = qaoa.qaoa_landscape_grid(

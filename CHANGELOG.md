@@ -8,6 +8,20 @@ and this project uses semantic versioning through the package version in
 
 ## [Unreleased]
 
+### Added
+
+- Phase-A expansion of `data/mp_theta_sh.csv` to **32** illustrative spintronic
+  materials with MP descriptors; `data/README.md` and row-level provenance for
+  every new row (#19).
+- `surrogate.qaoa_pool_dataset` / `filter_by_formulas` — train on the full corpus,
+  keep QAOA Hilbert space at N=12 (historical pool).
+
+### Changed
+
+- NB04 scope docs: full CSV for surrogate diversity; QAOA/greedy/SA still k=3 from
+  the fixed 12-material pool. Provenance contract deliberately keeps
+  `illustrative_oracle` (not a generic `literature` tag).
+
 ## [0.1.6] - 2026-08-17
 
 ### Added

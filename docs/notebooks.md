@@ -128,10 +128,11 @@ Sites 0 and 1 form a near-perfect Bell pair (singlet on that bond).
 
 **File:** [`04_soc_qaoa.ipynb`](../notebooks/04_soc_qaoa.ipynb)  
 **What it does:**
-- Loads θ_SH dataset from `data/mp_theta_sh.csv` (12 spintronic materials; MP descriptors + illustrative oracle targets)
-- Trains MLP surrogate (`surrogate.train_surrogate`)
-- Scatter plot: actual vs predicted θ_SH
-- Formulates k=3 from N=12 selection as QUBO with constraint penalty λ=6
+- Loads θ_SH dataset from `data/mp_theta_sh.csv` (**32** Phase-A spintronic materials; MP descriptors + illustrative oracle targets)
+- Trains MLP surrogate on the **full** corpus (`surrogate.train_surrogate`) for diversity / CV-ready diagnostics
+- Fits a separate **N=12 pool** surrogate for QAOA weights (`surrogate.qaoa_pool_dataset`) so Hilbert space stays `2^12`
+- Scatter plot: actual vs predicted θ_SH (full corpus)
+- Formulates k=3 from N=12 pool selection as QUBO with constraint penalty λ=6
 - Runs QAOA at depth p=1, 2, 3 (COBYLA, 5 seeds × 300 evals per depth)
 - **p=1 (γ, β) cost landscape** with COBYLA path; right panel plots total θ_SH vs depth
   (values pinned to `data/qaoa_results.csv` so the diagnostic matches published rankings)
@@ -157,14 +158,15 @@ Materials Project is therefore used as a structure and metadata source here; it 
 
 NB04 should be read as a small reproducibility and method-demonstration notebook:
 
-- It tests whether the committed 12-material table can drive a surrogate-plus-QAOA workflow end to end.
-- It compares QAOA selections against greedy and simulated-annealing baselines on the same oracle.
+- It tests whether the committed Phase-A table (32 materials) can drive a surrogate-plus-QAOA workflow end to end.
+- QAOA compares selections against greedy and simulated-annealing baselines on the **fixed historical N=12 pool**.
 - It does not claim a new experimentally validated material discovery.
 - It does not replace a larger literature review, DFT campaign, or laboratory validation.
+- Issue #19’s Phase-A goal (diversity ≥30) is met with honest `illustrative_oracle` provenance — not a generic `literature` tag.
 
-The main guarded conclusion is that, for the current 12-material surrogate oracle, classical baselines outperform the tested QAOA depths. That is a useful negative/diagnostic result and a boundary for future scaling work.
+The main guarded conclusion is that, for the current 12-material QAOA-pool oracle, classical baselines outperform the tested QAOA depths. That is a useful negative/diagnostic result and a boundary for future scaling work (`#23` train/pool split once the corpus grows further).
 
-**Results (k=3 from N=12 materials):**
+**Results (k=3 from N=12 QAOA pool):**
 
 | Method | Total θ_SH | Selected |
 |--------|-----------|----------|
@@ -319,6 +321,6 @@ Or open JupyterLab and run interactively.
 
 ## NB04 provenance and scope
 
-NB04 operates on **k=3 from N=12** using predictions from an in-sample surrogate fitted to the committed illustrative oracle. The near-diagonal surrogate scatter is therefore a training diagnostic, not an out-of-sample validation result. The ranking figure highlights exactly three entries because `k=3` is imposed by the QUBO constraint.
+NB04 operates on **k=3 from an N=12 QAOA pool** drawn from the Phase-A **32**-material illustrative CSV. Surrogate scatter diagnostics may use the full corpus; the near-diagonal pool fit remains a training diagnostic, not out-of-sample validation. The ranking figure highlights exactly three entries because `k=3` is imposed by the QUBO constraint.
 
 The committed targets are not asserted to be row-wise literature measurements. Consult [the provenance contract](../data/theta_sh_sources.md) and [machine-readable ledger](../data/theta_sh_provenance.csv). Results are limited to this fixed oracle and do not establish materials discovery, DFT-computed theta_SH, a global physical optimum, or quantum advantage.
