@@ -36,6 +36,7 @@ Pipeline
 5. ``qaoa_landscape_grid(...)``                     — (γ, β) cost landscape at p=1
 6. ``classical_greedy(theta_sh, k)``              — greedy baseline comparison → ``list[int]``
 7. ``classical_simulated_annealing(theta_sh, k)`` — SA baseline comparison
+8. ``screening_selection_row`` / ``save_qaoa_screening`` — train≠pool table (#23)
 
 References
 ----------
@@ -77,6 +78,7 @@ DEFAULT_SWEEP_P = (1, 2, 3)
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_QAOA_SWEEP_CSV = _REPO_ROOT / "data" / "qaoa_sweep.csv"
 DEFAULT_QAOA_SWEEP_SEEDS_CSV = _REPO_ROOT / "data" / "qaoa_sweep_seeds.csv"
+DEFAULT_QAOA_SCREENING_CSV = _REPO_ROOT / "data" / "qaoa_screening.csv"
 
 # ---------------------------------------------------------------------------
 # Result containers
@@ -946,6 +948,74 @@ def sweep_best_row(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
     if not rows:
         raise ValueError("no sweep rows")
     return max(rows, key=lambda r: float(r["best_theta_sh"]))
+
+
+def screening_selection_row(
+    method: str,
+    indices: Sequence[int],
+    formulas: Sequence[str],
+    theta_pred: np.ndarray,
+    theta_label: np.ndarray,
+    *,
+    n_train: int,
+    n_pool: int,
+    held_out_formulas: Sequence[str],
+    unseen_pool_formulas: Sequence[str],
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """One screening-evaluation row: predicted total and committed-label total."""
+    idx = [int(i) for i in indices]
+    names = [str(formulas[i]) for i in idx]
+    unseen = set(unseen_pool_formulas)
+    row = {
+        "method": method,
+        "k": NB04_K,
+        "N": int(n_pool),
+        "n_train": int(n_train),
+        "n_pool": int(n_pool),
+        "n_unseen_pool": len(unseen_pool_formulas),
+        "held_out_formulas": ";".join(held_out_formulas),
+        "unseen_pool_formulas": ";".join(unseen_pool_formulas),
+        "selected_idx": str(idx),
+        "selected_formulas": str(names),
+        "total_pred": float(np.sum(theta_pred[idx])),
+        "total_label": float(np.sum(theta_label[idx])),
+        "n_unseen_selected": sum(1 for n in names if n in unseen),
+        "oracle_mode": "screening",
+        "evals": "",
+    }
+    if extra:
+        row.update(extra)
+    return row
+
+
+def save_qaoa_screening(
+    rows: Sequence[dict[str, Any]],
+    path: Path | str = DEFAULT_QAOA_SCREENING_CSV,
+) -> Path:
+    """Write the #23 screening table. Does not modify ``qaoa_results.csv``."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not rows:
+        raise ValueError("screening rows are empty")
+    with path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=list(rows[0].keys()),
+            lineterminator="\n",
+        )
+        writer.writeheader()
+        writer.writerows(rows)
+    return path
+
+
+def load_qaoa_screening(
+    path: Path | str = DEFAULT_QAOA_SCREENING_CSV,
+) -> list[dict[str, str]]:
+    """Load a committed screening CSV."""
+    path = Path(path)
+    with path.open(newline="", encoding="utf-8") as f:
+        return list(csv.DictReader(f))
 
 
 def qaoa_summary(result: QAOAResult, formulas: list[str] | None = None) -> None:

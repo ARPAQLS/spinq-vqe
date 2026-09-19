@@ -193,6 +193,9 @@ from spinq_vqe import surrogate
 | `build_features(dataset)` | Extract feature matrix `(N, 6)` |
 | `train_surrogate(dataset, ..., hold_out_frac=, cv_strategy=)` | Fit Pipeline (scaler+MLP) or ridge; attach train/CV/hold-out metrics |
 | `split_hold_out(dataset, ...)` | Train / hold-out split (fraction or formulas) |
+| `split_dataset(dataset, train_formulas=, pool_formulas=)` | Train vs QAOA pool (#23); pool defaults to N=12 |
+| `screening_split(dataset)` | Frozen #20 hold-out + historical pool, with unseen pool members |
+| `predict_screening_oracle(split, ...)` | Fit on train only; predict the pool (no leakage) |
 | `cross_validate_surrogate(dataset, ...)` | Out-of-fold predictions + CV metrics (no scaler leakage) |
 | `predict(surrogate, records)` | Predict θ_SH for new records |
 | `predict_oracle(dataset, mode=...)` | QAOA weights: `in_sample`, `loocv`, or `kfold` |
@@ -207,6 +210,10 @@ sr = surrogate.train_surrogate(           # diversity + hold-out diagnostics
 pool = surrogate.qaoa_pool_dataset(ds)    # N=12 historical pool
 theta_sh, metrics = surrogate.predict_oracle(pool, mode="in_sample")
 # Optional honesty check: predict_oracle(pool, mode="loocv")
+
+split = surrogate.screening_split(ds)     # train = #20 complement
+theta_pred, _ = surrogate.predict_screening_oracle(split)
+# QAOA / greedy run on theta_pred; Hilbert space still 2^12
 ```
 
 Refresh CSV (optional, requires `MP_API_KEY` in `.env`):
@@ -236,6 +243,8 @@ from spinq_vqe import qaoa
 | `run_qaoa(theta_sh, k, p, ...)` | Full QAOA optimization (COBYLA); stores per-seed θ_SH |
 | `run_qaoa_sweep(theta_sh, k, ...)` | λ / budget / depth grid on a frozen oracle (#21) |
 | `save_qaoa_sweep` / `load_qaoa_sweep` | Persist / reload sweep CSVs |
+| `save_qaoa_screening` / `load_qaoa_screening` | Persist / reload #23 screening table |
+| `screening_selection_row(...)` | Predicted + committed-label totals for one selection |
 | `sweep_best_row(rows)` | Highest `best_theta_sh` (best-cost seed) in a loaded sweep |
 | `is_published_qaoa_config(...)` | True when a cell matches committed NB04 QAOA settings |
 | `oracle_id(theta_sh)` | Short fingerprint of the frozen θ_SH vector |
@@ -259,6 +268,7 @@ Sweep (does not overwrite `data/qaoa_results.csv`):
 
 ```bash
 python scripts/run_qaoa_sweep.py
+python scripts/evaluate_qaoa_screening.py
 ```
 
 ---
@@ -329,6 +339,7 @@ from spinq_vqe import utils
 | `plot_gradient_variance(results, ...)` | Barren plateau diagnostic |
 | `plot_qaoa_landscape(gamma, beta, energies, ...)` | NB04 landscape + θ_SH depth panel |
 | `plot_qaoa_sweep(rows, ...)` | λ / budget sensitivity; y-axis is θ_SH of the best-cost seed |
+| `plot_qaoa_screening(rows, ...)` | Screening-oracle vs committed-label totals (#23) |
 | `plot_surrogate_holdout(...)` | Train vs numbered hold-out parity plot + matched table |
 
 All plots use a consistent soft pastel palette (`SUBLATTICE_COLORS`, `ANSATZ_COLORS`).

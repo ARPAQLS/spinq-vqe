@@ -14,8 +14,10 @@ from spinq_vqe.surrogate import (
     DEFAULT_THETA_SH_CSV,
     FEATURE_NAMES,
     MIN_CURATED_N,
+    NB04_HOLD_OUT_FORMULAS,
     QAOA_POOL_SIZE,
     MaterialRecord,
+    ScreeningSplit,
     SurrogateDataset,
     SurrogateMetrics,
     TrainedSurrogate,
@@ -27,8 +29,11 @@ from spinq_vqe.surrogate import (
     load_theta_sh_data,
     predict,
     predict_oracle,
+    predict_screening_oracle,
     qaoa_pool_dataset,
     save_surrogate_metrics,
+    screening_split,
+    split_dataset,
     split_hold_out,
     train_surrogate,
 )
@@ -414,3 +419,92 @@ def test_plot_surrogate_holdout_numbers_match_table(tmp_path):
     assert cells[1, 0].get_text().get_text() == "1"
     assert cells[1, 1].get_text().get_text() == "Bi2Se3"
     matplotlib.pyplot.close(fig)
+
+
+class TestScreeningSplit:
+    def test_frozen_sizes_and_unseen(self):
+        ds = load_theta_sh_csv()
+        split = screening_split(ds)
+        assert split.n_train == 25
+        assert split.n_pool == QAOA_POOL_SIZE
+        assert split.n_hold_out == 7
+        assert list(split.hold_out.formulas) == list(NB04_HOLD_OUT_FORMULAS)
+        assert list(split.unseen_pool_formulas) == ["W", "Pd", "MnPt", "Bi2Se3"]
+        assert set(split.unseen_pool_formulas).isdisjoint(set(split.train.formulas))
+        assert set(split.unseen_pool_formulas).issubset(set(split.pool.formulas))
+
+    def test_split_dataset_defaults_match_screening(self):
+        ds = load_theta_sh_csv()
+        train, pool = split_dataset(ds)
+        split = screening_split(ds)
+        assert train.formulas == split.train.formulas
+        assert pool.formulas == split.pool.formulas
+
+    def test_split_dataset_explicit_formulas(self):
+        ds = load_theta_sh_csv()
+        train, pool = split_dataset(
+            ds,
+            train_formulas=["Mn3Sn", "Pt", "Au", "Fe3Sn", "CrTe2"],
+            pool_formulas=["W", "Ta", "Bi2Se3", "Pd"],
+        )
+        assert train.n_samples == 5
+        assert pool.n_samples == 4
+        assert "W" not in train.formulas
+
+    def test_predict_screening_oracle_no_leakage(self):
+        pytest.importorskip("sklearn")
+        split = screening_split(load_theta_sh_csv())
+        preds, sr = predict_screening_oracle(
+            split, max_iter=400, random_state=0
+        )
+        assert len(preds) == split.n_pool
+        assert np.all(np.isfinite(preds))
+        assert sr.metrics is not None
+        assert sr.metrics.oracle_mode == "screening"
+        assert set(split.unseen_pool_formulas).isdisjoint(set(split.train.formulas))
+
+    def test_predict_screening_oracle_raises_on_leak(self):
+        pytest.importorskip("sklearn")
+        split = screening_split(load_theta_sh_csv())
+        leaked = ScreeningSplit(
+            train=load_theta_sh_csv(),
+            pool=split.pool,
+            hold_out=split.hold_out,
+            unseen_pool_formulas=split.unseen_pool_formulas,
+        )
+        with pytest.raises(ValueError, match="leaked"):
+            predict_screening_oracle(leaked, max_iter=50)
+
+    def test_screening_split_requires_unseen_pool(self):
+        ds = load_theta_sh_csv()
+        with pytest.raises(ValueError, match="no unseen pool"):
+            screening_split(ds, hold_out_formulas=["Ag", "Sb2Te3", "Mn3Ga"])
+
+
+def test_committed_qaoa_screening_csv_if_present():
+    from pathlib import Path
+
+    from spinq_vqe.qaoa import load_qaoa_screening
+
+    path = Path(__file__).resolve().parents[1] / "data" / "qaoa_screening.csv"
+    if not path.is_file():
+        pytest.skip("qaoa_screening.csv not generated yet")
+    rows = load_qaoa_screening(path)
+    assert rows
+    methods = {r["method"] for r in rows}
+    assert "Greedy_pred" in methods
+    assert "Greedy_label" in methods
+    assert {"QAOA_p1", "QAOA_p2", "QAOA_p3"} <= methods
+    assert int(rows[0]["n_train"]) == 25
+    assert int(rows[0]["n_pool"]) == 12
+    assert rows[0]["unseen_pool_formulas"] == "W;Pd;MnPt;Bi2Se3"
+    label_row = next(r for r in rows if r["method"] == "Greedy_label")
+    # Raw CSV labels for Bi2Se3+CrTe2+Mn3Sn (not the in-sample 4.258934).
+    assert float(label_row["total_label"]) == pytest.approx(4.25, abs=1e-6)
+    greedy_pred = next(r for r in rows if r["method"] == "Greedy_pred")
+    assert float(greedy_pred["total_pred"]) == pytest.approx(2.899645, rel=1e-4)
+    assert int(greedy_pred["n_unseen_selected"]) == 2
+    qaoa_preds = [
+        float(r["total_pred"]) for r in rows if r["method"].startswith("QAOA_")
+    ]
+    assert float(greedy_pred["total_pred"]) >= max(qaoa_preds) - 1e-9
