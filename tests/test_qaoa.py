@@ -18,11 +18,14 @@ from spinq_vqe.qaoa import (
     evaluate_qaoa_cost,
     find_landscape_minima,
     is_published_qaoa_config,
+    load_qaoa_screening,
     load_qaoa_sweep,
     qaoa_landscape_grid,
     run_qaoa,
     run_qaoa_sweep,
+    save_qaoa_screening,
     save_qaoa_sweep,
+    screening_selection_row,
     sweep_best_row,
 )
 
@@ -337,3 +340,39 @@ def test_committed_qaoa_sweep_csv_if_present():
     assert seeds_path.is_file()
     seed_rows = seeds_path.read_text(encoding="utf-8").strip().splitlines()
     assert len(seed_rows) == 1 + 22 * 5
+
+
+def test_screening_row_roundtrip(tmp_path):
+    pred = np.array([0.1, 0.4, 3.5, -0.3])
+    label = np.array([0.35, 0.40, 3.50, -0.33])
+    formulas = ["Mn3Sn", "CrTe2", "Bi2Se3", "W"]
+    row = screening_selection_row(
+        "Greedy_pred",
+        [2, 1, 0],
+        formulas,
+        pred,
+        label,
+        n_train=25,
+        n_pool=4,
+        held_out_formulas=["W", "Bi2Se3"],
+        unseen_pool_formulas=["W", "Bi2Se3"],
+    )
+    assert row["n_unseen_selected"] == 1
+    assert row["total_pred"] == pytest.approx(4.0)
+    path = save_qaoa_screening([row], tmp_path / "s.csv")
+    loaded = load_qaoa_screening(path)
+    assert loaded[0]["method"] == "Greedy_pred"
+
+
+def test_plot_qaoa_screening(tmp_path):
+    matplotlib = pytest.importorskip("matplotlib")
+    matplotlib.use("Agg")
+    from spinq_vqe.utils import plot_qaoa_screening
+
+    rows = [
+        {"method": "Greedy_pred", "total_pred": 1.0, "total_label": 4.0},
+        {"method": "Greedy_label", "total_pred": 0.5, "total_label": 4.2},
+    ]
+    fig = plot_qaoa_screening(rows, save_path=str(tmp_path / "s.png"))
+    assert len(fig.axes) == 1
+    matplotlib.pyplot.close(fig)

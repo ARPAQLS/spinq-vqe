@@ -43,6 +43,7 @@ Notebook runs use the committed CSV — **no API key**.
 | `vqe_results.csv`, `vqe_seeds_n9.csv`, `vqe_scaling.csv` | NB02 / NB05 |
 | `qaoa_results.csv` | NB04 (published single-config totals) |
 | `qaoa_sweep.csv`, `qaoa_sweep_seeds.csv` | NB04 (#21 λ / budget / depth sweep) |
+| `qaoa_screening.csv` | NB04 (#23 train/pool screening evaluation) |
 | `surrogate_metrics.csv` | NB04 (train / CV / hold-out + pool LOOCV) |
 | `dmrg_reference_energies.csv` | NB06 |
 | `method_comparison.csv`, `nqs_*_history_*.csv` | NB07 |
@@ -59,3 +60,15 @@ python scripts/run_qaoa_sweep.py
 
 Committed default grid: 22 cells (110 seed rows). Best QAOA is 3.570
 (p=1, λ=5) vs greedy 4.259. `best_theta_sh` is the best-cost seed.
+
+Regenerate the screening evaluation (does not touch `qaoa_results.csv`):
+
+```bash
+python scripts/evaluate_qaoa_screening.py
+```
+
+Train = #20 25-row complement; pool = historical 12; unseen in pool =
+W, Pd, MnPt, Bi2Se3. On the screening oracle, greedy/SA reach 2.900 vs
+best QAOA 2.505 (p=3). `total_label` is the post-hoc sum of committed
+CSV labels for the selected triple (Greedy_label = 4.250, not the
+in-sample 4.259).

@@ -61,6 +61,8 @@ NB04 demonstrates the pipeline
   (`data/qaoa_sweep.csv`) tests whether that ranking is an under-tuned COBYLA
   setting; it does not replace `data/qaoa_results.csv`. Best sweep cell is
   θ_SH = 3.570 (p=1, λ=5) vs greedy 4.259 (`best_theta_sh` is the best-cost seed).
+  A screening split (`data/qaoa_screening.csv`) trains on the #20 25-row
+  complement and deploys on the same N=12 pool (unseen: W, Pd, MnPt, Bi2Se3).
 
 The reported totals and selected triples are results on that precise committed
 oracle. They do not establish DFT-computed θ_SH, production materials discovery,
@@ -68,4 +70,6 @@ a transferable ML model, a global physical optimum, or quantum advantage.
 
 If a target is replaced with a sourced value, the surrogate fit, hold-out
 metrics, classical baselines, QAOA runs, tables, and figures must be regenerated
-together (`python scripts/evaluate_surrogate.py` plus NB04).
+together (`python scripts/evaluate_surrogate.py`,
+`python scripts/evaluate_qaoa_screening.py` if the screening table is affected,
+plus NB04).

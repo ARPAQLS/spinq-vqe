@@ -140,12 +140,16 @@ Sites 0 and 1 form a near-perfect Bell pair (singlet on that bond).
 - Classical baselines: greedy top-k and simulated annealing
 - Bar comparison and material ranking visualisation
 - **λ / budget / depth sweep** on the frozen pool oracle (`data/qaoa_sweep.csv`; does not replace published `qaoa_results.csv`)
+- **Screening split (#23):** train on the #20 25-row complement; optimize over the N=12 pool with 4 unseen members (`data/qaoa_screening.csv`)
 
 **Regenerate surrogate figure + metrics (no API key, no full QAOA rerun):**
 `python scripts/evaluate_surrogate.py`
 
 **Regenerate QAOA hyperparameter sweep (does not modify `qaoa_results.csv`):**
 `python scripts/run_qaoa_sweep.py`
+
+**Regenerate screening evaluation (does not modify `qaoa_results.csv`):**
+`python scripts/evaluate_qaoa_screening.py`
 
 **Key outputs:**
 - `figures/surrogate_predictions.png` (numbered hold-out key)
@@ -157,6 +161,8 @@ Sites 0 and 1 form a near-perfect Bell pair (singlet on that bond).
 - `figures/qaoa_sweep.png`
 - `data/qaoa_results.csv`
 - `data/qaoa_sweep.csv`, `data/qaoa_sweep_seeds.csv`
+- `figures/qaoa_screening.png`
+- `data/qaoa_screening.csv`
 
 ### Data provenance and scope boundary
 
@@ -175,7 +181,7 @@ NB04 should be read as a small reproducibility and method-demonstration notebook
 - It does not replace a larger literature review, DFT campaign, or laboratory validation.
 - Issue #19’s Phase-A goal (diversity ≥30) is met with honest `illustrative_oracle` provenance — not a generic `literature` tag.
 
-The main guarded conclusion is that, for the current 12-material QAOA-pool oracle, classical baselines outperform the tested QAOA depths **even after a λ / budget / depth sweep** (#21). Best QAOA in `data/qaoa_sweep.csv` is **3.570** (p=1, λ=5, W / CrTe₂ / Bi₂Se₃) against greedy **4.259**; extra budget at λ=6 does not close the gap. Sweep points are θ_SH of the best-cost seed, matching the published table. That is a useful negative/diagnostic result and a boundary for future scaling work (`#23` train/pool split). The published table is the default NB04 config and is not replaced by the sweep.
+The main guarded conclusion is that, for the current 12-material QAOA-pool oracle, classical baselines outperform the tested QAOA depths **even after a λ / budget / depth sweep** (#21). Best QAOA in `data/qaoa_sweep.csv` is **3.570** (p=1, λ=5, W / CrTe₂ / Bi₂Se₃) against greedy **4.259**; extra budget at λ=6 does not close the gap. Sweep points are θ_SH of the best-cost seed, matching the published table. A separate **screening** evaluation (#23) trains on the #20 25-row complement and deploys on the same N=12 pool (4 unseen: W, Pd, MnPt, Bi₂Se₃). On that predicted oracle, greedy/SA still win (**2.900** vs QAOA **2.505** at p=3). The published in-sample table is not replaced.
 
 **Results (k=3 from N=12 QAOA pool):**
 
@@ -186,6 +192,17 @@ The main guarded conclusion is that, for the current 12-material QAOA-pool oracl
 | QAOA p=3 | −0.451 | W, Ta, Pd |
 | **Greedy** | **4.259** | **Bi₂Se₃, CrTe₂, Mn₃Sn** |
 | Sim. annealing | 4.259 | Mn₃Sn, CrTe₂, Bi₂Se₃ |
+
+**Screening evaluation** (`data/qaoa_screening.csv`; train ≠ pool):
+
+| Method | Pred θ_SH | Label θ_SH | Selected | Unseen |
+|--------|-----------|------------|----------|--------|
+| QAOA p=1 | 0.981 | 1.000 | Mn₃Sn, Fe₃Sn, CrTe₂ | 0 |
+| QAOA p=2 | 2.154 | 0.900 | Mn₃Sn, CrTe₂, MnPt | 1 |
+| QAOA p=3 | 2.505 | 3.320 | W, MnPt, Bi₂Se₃ | 3 |
+| **Greedy (pred)** | **2.900** | 4.050 | **MnPt, Bi₂Se₃, CrTe₂** | 2 |
+| Sim. annealing | 2.900 | 4.050 | CrTe₂, MnPt, Bi₂Se₃ | 2 |
+| Greedy (labels) | 1.782 | **4.250** | Bi₂Se₃, CrTe₂, Mn₃Sn | 1 |
 
 With MP-grounded structure descriptors (`data/mp_theta_sh.csv`), classical
 baselines beat QAOA on the surrogate oracle. QAOA p=1/2 (λ=6, 300 evals) tie
@@ -218,6 +235,9 @@ Regenerate with `python scripts/evaluate_surrogate.py`.
 </tr>
 <tr>
 <td colspan="2"><img src="../figures/qaoa_sweep.png" alt="QAOA λ and budget sweep" width="100%"></td>
+</tr>
+<tr>
+<td colspan="2"><img src="../figures/qaoa_screening.png" alt="QAOA screening evaluation" width="100%"></td>
 </tr>
 </table>
 
@@ -352,6 +372,6 @@ Or open JupyterLab and run interactively.
 
 ## NB04 provenance and scope
 
-NB04 operates on **k=3 from an N=12 QAOA pool** drawn from the Phase-A **32**-material illustrative CSV. Surrogate diagnostics report train, cross-validated, and hold-out RMSE; the near-diagonal train scatter is not out-of-sample validation. QAOA weights use `oracle=in_sample` on the pool for published continuity, with pool LOOCV RMSE reported alongside. A λ / budget / depth sweep (`data/qaoa_sweep.csv`) tests whether that ranking is an under-tuned COBYLA setting (best cell 3.570 at p=1, λ=5; greedy still 4.259). The ranking figure highlights exactly three entries because `k=3` is imposed by the QUBO constraint.
+NB04 operates on **k=3 from an N=12 QAOA pool** drawn from the Phase-A **32**-material illustrative CSV. Surrogate diagnostics report train, cross-validated, and hold-out RMSE; the near-diagonal train scatter is not out-of-sample validation. QAOA weights use `oracle=in_sample` on the pool for published continuity, with pool LOOCV RMSE reported alongside. A λ / budget / depth sweep (`data/qaoa_sweep.csv`) tests whether that ranking is an under-tuned COBYLA setting (best cell 3.570 at p=1, λ=5; greedy still 4.259). A screening split (`data/qaoa_screening.csv`) trains on the #20 complement and deploys on the same pool with 4 unseen members. The ranking figure highlights exactly three entries because `k=3` is imposed by the QUBO constraint.
 
 The committed targets are not asserted to be row-wise literature measurements. Consult [the provenance contract](../data/theta_sh_sources.md) and [machine-readable ledger](../data/theta_sh_provenance.csv). Results are limited to this fixed oracle and do not establish materials discovery, DFT-computed theta_SH, a global physical optimum, or quantum advantage.

@@ -35,7 +35,9 @@ Two parallel research threads:
 > Materials Project descriptors with a fixed, illustrative θ_SH oracle (**32**
 > Phase-A materials). Surrogate diagnostics report train / CV / hold-out metrics;
 > QAOA / greedy / SA still select **k=3 from a fixed N=12 pool** with
-> `oracle=in_sample` (pool LOOCV RMSE reported alongside). Targets reproduce this
+> `oracle=in_sample` (pool LOOCV RMSE reported alongside). A screening
+> split (#23) trains on the hold-out complement and is reported separately;
+> it does not replace the published table. Targets reproduce this
 > workflow — they are not row-wise verified measurements. See
 > [`data/theta_sh_sources.md`](data/theta_sh_sources.md) and
 > [`data/theta_sh_provenance.csv`](data/theta_sh_provenance.csv).
@@ -57,7 +59,7 @@ spinq-vqe/
 ├── notebooks/           # Executable research notebooks
 ├── figures/             # Generated plots
 ├── data/                # ED/VQE/QAOA/DMRG/NQS CSVs, mp_theta_sh.csv, surrogate_metrics.csv
-├── scripts/             # Benchmarks, fetch_mp_theta_sh.py, evaluate_surrogate.py, run_qaoa_sweep.py
+├── scripts/             # Benchmarks, fetch_mp_theta_sh.py, evaluate_surrogate.py, run_qaoa_sweep.py, evaluate_qaoa_screening.py
 ├── docs/                # Guides and API reference → docs/README.md
 ├── OVERVIEW.md          # Full program description + research context
 └── REFERENCES.md        # Full bibliography (50+ references)
@@ -101,7 +103,7 @@ python scripts/fetch_mp_theta_sh.py
 | 01 | [`01_kagome_hamiltonian.ipynb`](notebooks/01_kagome_hamiltonian.ipynb) | lattice, ED baseline, figures |
 | 02 | [`02_vqe_run.ipynb`](notebooks/02_vqe_run.ipynb) | COBYLA seed stats (mean ± std), 9.66% best error, Adam barren plateau |
 | 03 | [`03_entanglement.ipynb`](notebooks/03_entanglement.ipynb) | entropy profile, MI matrix, sublattice correlations |
-| 04 | [`04_soc_qaoa.ipynb`](notebooks/04_soc_qaoa.ipynb) | surrogate train/CV/hold-out, QAOA p=1/2/3, λ/budget sweep, ranking, landscape |
+| 04 | [`04_soc_qaoa.ipynb`](notebooks/04_soc_qaoa.ipynb) | surrogate train/CV/hold-out, QAOA p=1/2/3, λ/budget sweep, screening split, ranking, landscape |
 | 05 | [`05_scaling_analysis.ipynb`](notebooks/05_scaling_analysis.ipynb) | N=9/12/18 scaling, gradient variance, barren plateau |
 | 06 | [`06_dmrg_comparison.ipynb`](notebooks/06_dmrg_comparison.ipynb) | TeNPy DMRG vs ED/VQE, χ convergence, entanglement profile |
 | 07 | [`07_nqs_comparison.ipynb`](notebooks/07_nqs_comparison.ipynb) | NetKet NQS (complex RBM / RBMModPhase) vs ED/DMRG/VQE |
@@ -202,6 +204,28 @@ budget at λ=6 does not close the gap; a p=4 probe reaches 3.40. Points are
 θ_SH of the **best-cost seed** (same rule as the table).
 
 <img src="figures/qaoa_sweep.png" alt="QAOA lambda and budget sweep" width="720">
+
+A screening evaluation (#23) trains on the #20 25-row complement and
+optimizes over the same N=12 pool (`data/qaoa_screening.csv`;
+`python scripts/evaluate_qaoa_screening.py`). Four pool members
+(W, Pd, MnPt, Bi₂Se₃) were never in the fit. The published in-sample
+table above is unchanged.
+
+| Method | Pred θ_SH | Label θ_SH | Selected | Unseen in sel |
+|--------|-----------|------------|----------|---------------|
+| QAOA p=1 | 0.981 | 1.000 | Mn₃Sn, Fe₃Sn, CrTe₂ | 0 |
+| QAOA p=2 | 2.154 | 0.900 | Mn₃Sn, CrTe₂, MnPt | 1 |
+| QAOA p=3 | 2.505 | 3.320 | W, MnPt, Bi₂Se₃ | 3 |
+| **Greedy (pred)** | **2.900** | 4.050 | **MnPt, Bi₂Se₃, CrTe₂** | 2 |
+| Sim. annealing | 2.900 | 4.050 | CrTe₂, MnPt, Bi₂Se₃ | 2 |
+| Greedy (labels) | 1.782 | **4.250** | Bi₂Se₃, CrTe₂, Mn₃Sn | 1 |
+
+On the screening oracle, greedy/SA still win (**2.900** vs QAOA **2.505** at
+p=3). Post-hoc labels of that greedy triple are 4.050; the label-optimal
+triple is still Bi₂Se₃ / CrTe₂ / Mn₃Sn at **4.250** (raw CSV labels, not
+the in-sample 4.259).
+
+<img src="figures/qaoa_screening.png" alt="QAOA screening evaluation" width="720">
 
 ## Tests
 
