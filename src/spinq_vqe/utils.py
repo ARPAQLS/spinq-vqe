@@ -12,6 +12,7 @@ plot_mutual_info_matrix  : Heatmap of sublattice mutual information
 plot_gradient_variance   : Barren plateau diagnostic plot
 plot_qaoa_landscape      : QAOA p=1 (γ, β) landscape + depth panel
 plot_qaoa_sweep          : λ / budget sensitivity (#21)
+plot_qaoa_screening      : Screening-oracle vs committed-label totals (#23)
 plot_surrogate_holdout   : Train vs numbered hold-out parity plot (#20)
 """
 
@@ -674,6 +675,47 @@ def plot_qaoa_sweep(
         fontsize=13,
         y=1.02,
     )
+    fig.tight_layout()
+    if save_path:
+        fig.savefig(save_path, bbox_inches="tight", dpi=150)
+    return fig
+
+
+def plot_qaoa_screening(
+    rows: list[dict],
+    *,
+    save_path: str | None = None,
+    title: str | None = None,
+) -> plt.Figure:
+    """
+    Grouped bars: screening-oracle total (predicted) vs committed-label total
+    for the same selected triple. Does not replace the published in-sample table.
+    """
+    label_map = {
+        "QAOA_p1": "QAOA p=1",
+        "QAOA_p2": "QAOA p=2",
+        "QAOA_p3": "QAOA p=3",
+        "Greedy_pred": "Greedy (pred)",
+        "SA": "SA",
+        "Greedy_label": "Greedy (labels)",
+    }
+    methods = [label_map.get(str(r["method"]), str(r["method"])) for r in rows]
+    pred = [float(r["total_pred"]) for r in rows]
+    label = [float(r["total_label"]) for r in rows]
+    x = np.arange(len(methods))
+    width = 0.38
+    fig, ax = plt.subplots(figsize=(9.2, 4.4))
+    ax.bar(x - width / 2, pred, width, color="#7EB8D4", label="Screening oracle (predicted)")
+    ax.bar(x + width / 2, label, width, color="#E8A598", label="Committed labels (post-hoc)")
+    ax.set_xticks(x)
+    ax.set_xticklabels(methods, rotation=20, ha="right")
+    ax.set_ylabel("Total θ_SH")
+    ax.set_title(
+        title or "Screening evaluation — train ≠ pool (#23)",
+        fontsize=13,
+    )
+    ax.legend(frameon=False, fontsize=9)
+    ax.axhline(0.0, color="#B0B0B0", lw=0.8)
     fig.tight_layout()
     if save_path:
         fig.savefig(save_path, bbox_inches="tight", dpi=150)

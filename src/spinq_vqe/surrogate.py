@@ -146,7 +146,37 @@ class SurrogateMetrics:
     hold_out_r2: float = float("nan")
     hold_out_formulas: tuple[str, ...] = ()
     oracle_mode: str = "in_sample"
-    """Oracle policy used for QAOA weights: ``in_sample`` or ``loocv`` / ``kfold``."""
+    """Oracle policy used for QAOA weights: ``in_sample``, ``loocv`` / ``kfold``, or ``screening``."""
+
+
+@dataclass
+class ScreeningSplit:
+    """Train / pool split for screening-style QAOA (#23).
+
+    The model is fit on ``train`` only. QAOA / greedy / SA run on ``pool``.
+    ``unseen_pool_formulas`` are pool members that were not in the fit.
+    """
+
+    train: SurrogateDataset
+    pool: SurrogateDataset
+    hold_out: SurrogateDataset
+    unseen_pool_formulas: tuple[str, ...]
+
+    @property
+    def n_train(self) -> int:
+        return self.train.n_samples
+
+    @property
+    def n_pool(self) -> int:
+        return self.pool.n_samples
+
+    @property
+    def n_hold_out(self) -> int:
+        return self.hold_out.n_samples
+
+    @property
+    def n_unseen_pool(self) -> int:
+        return len(self.unseen_pool_formulas)
 
 
 @dataclass
@@ -239,6 +269,18 @@ QAOA_POOL_FORMULAS: tuple[str, ...] = tuple(
     e["formula"] for e in CURATED_ORACLE[:QAOA_POOL_SIZE]
 )
 MIN_CURATED_N = 30
+
+# Committed #20 hold-out (``split_hold_out(..., hold_out_frac=0.2, random_state=0)``
+# on the 32-row CSV). Frozen so screening does not drift if split defaults change.
+NB04_HOLD_OUT_FORMULAS: tuple[str, ...] = (
+    "W",
+    "Pd",
+    "MnPt",
+    "Bi2Se3",
+    "Ag",
+    "Sb2Te3",
+    "Mn3Ga",
+)
 
 # Offline test fallback (no CSV, no API).
 _MOCK_DATA: list[dict] = [
@@ -425,6 +467,116 @@ def qaoa_pool_dataset(dataset: SurrogateDataset | None = None) -> SurrogateDatas
     """
     ds = dataset if dataset is not None else load_theta_sh_data()
     return filter_by_formulas(ds, QAOA_POOL_FORMULAS)
+
+
+def split_dataset(
+    dataset: SurrogateDataset,
+    *,
+    train_formulas: Sequence[str] | None = None,
+    pool_formulas: Sequence[str] | None = None,
+    hold_out_formulas: Sequence[str] | None = None,
+) -> tuple[SurrogateDataset, SurrogateDataset]:
+    """
+    Split into a training set and a QAOA / greedy / SA candidate pool (#23).
+
+    ``pool_formulas`` defaults to the historical N=12 QAOA pool so the Hilbert
+    space stays ``2^12``. Pass an explicit list (e.g. ``dataset.formulas``) for
+    a different pool. ``train_formulas`` defaults to the complement of
+    ``hold_out_formulas`` or the committed #20 hold-out.
+    """
+    if train_formulas is not None:
+        train = filter_by_formulas(dataset, train_formulas)
+    else:
+        ho = (
+            hold_out_formulas
+            if hold_out_formulas is not None
+            else NB04_HOLD_OUT_FORMULAS
+        )
+        train, _ = split_hold_out(dataset, hold_out_formulas=ho)
+    pool = (
+        filter_by_formulas(dataset, pool_formulas)
+        if pool_formulas is not None
+        else qaoa_pool_dataset(dataset)
+    )
+    return train, pool
+
+
+def screening_split(
+    dataset: SurrogateDataset | None = None,
+    *,
+    hold_out_formulas: Sequence[str] | None = None,
+    pool_formulas: Sequence[str] | None = None,
+) -> ScreeningSplit:
+    """
+    Frozen NB04 screening split: #20 hold-out train complement + historical pool.
+
+    Pool members that sit in the hold-out (W, Pd, MnPt, Bi₂Se₃ on the committed
+    CSV) are the unseen screening candidates. Hilbert space stays ``2^12``.
+    """
+    ds = dataset if dataset is not None else load_theta_sh_data()
+    ho_forms = (
+        tuple(hold_out_formulas)
+        if hold_out_formulas is not None
+        else NB04_HOLD_OUT_FORMULAS
+    )
+    hold = filter_by_formulas(ds, ho_forms)
+    hold_set = set(hold.formulas)
+    train = SurrogateDataset(
+        records=[r for r in ds.records if r.formula not in hold_set]
+    )
+    pool = (
+        filter_by_formulas(ds, pool_formulas)
+        if pool_formulas is not None
+        else qaoa_pool_dataset(ds)
+    )
+    unseen = tuple(f for f in pool.formulas if f in hold_set)
+    if train.n_samples < 5:
+        raise ValueError(
+            f"Screening train split has {train.n_samples} rows (need ≥5)."
+        )
+    if not unseen:
+        raise ValueError(
+            "Screening split has no unseen pool members; hold-out must "
+            "intersect the QAOA pool."
+        )
+    leaked = set(unseen) & set(train.formulas)
+    if leaked:
+        raise ValueError(f"Unseen pool formulas leaked into train: {sorted(leaked)}")
+    return ScreeningSplit(
+        train=train,
+        pool=pool,
+        hold_out=hold,
+        unseen_pool_formulas=unseen,
+    )
+
+
+def predict_screening_oracle(
+    split: ScreeningSplit,
+    *,
+    hidden_layer_sizes: tuple[int, ...] = (64, 32),
+    max_iter: int = 3000,
+    random_state: int = 0,
+) -> tuple[np.ndarray, TrainedSurrogate]:
+    """
+    Fit on ``split.train`` only and predict θ_SH on ``split.pool``.
+
+    Raises if any unseen pool formula appears in the training set.
+    """
+    leaked = set(split.unseen_pool_formulas) & set(split.train.formulas)
+    if leaked:
+        raise ValueError(f"Unseen pool formulas leaked into train: {sorted(leaked)}")
+    sr = train_surrogate(
+        split.train,
+        hidden_layer_sizes=hidden_layer_sizes,
+        max_iter=max_iter,
+        random_state=random_state,
+        compute_cv=False,
+    )
+    if sr.metrics is None:
+        sr.metrics = SurrogateMetrics(n_samples=split.n_train)
+    sr.metrics.oracle_mode = "screening"
+    preds = predict(sr, split.pool.records)
+    return np.asarray(preds, dtype=float), sr
 
 
 def fetch_curated_mp_dataset(api_key: str | None = None) -> tuple[SurrogateDataset, list[dict]]:

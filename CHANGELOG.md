@@ -22,6 +22,13 @@ and this project uses semantic versioning through the package version in
   unchanged.
 - `scripts/run_qaoa_sweep.py` and `utils.plot_qaoa_sweep` (does not modify
   published `data/qaoa_results.csv`).
+- Screening-style train/pool split: MLP fit on the #20 25-row complement,
+  QAOA / greedy / SA on the historical N=12 pool with 4 unseen pool members
+  (`data/qaoa_screening.csv`, `figures/qaoa_screening.png`) (#23). Best
+  screening QAOA is 2.505 (p=3) vs greedy/SA 2.900 on predicted weights.
+  Published `qaoa_results.csv` unchanged.
+- `surrogate.split_dataset` / `screening_split` / `predict_screening_oracle`
+  and `scripts/evaluate_qaoa_screening.py`.
 - Phase-A expansion of `data/mp_theta_sh.csv` to **32** illustrative spintronic
   materials with MP descriptors; `data/README.md` and row-level provenance for
   every new row (#19).
@@ -36,6 +43,8 @@ and this project uses semantic versioning through the package version in
 - NB04 loads a λ / budget / depth sweep next to the published single-config table
   so “classical still wins” is not a one-shot COBYLA setting (#21). Best sweep
   cell remains below greedy (3.570 vs 4.259).
+- NB04 adds a screening section so “we optimized over the training set” is no
+  longer the only QAOA story (#23). Hilbert space stays `2^12`.
 - NB04 scope docs: full CSV for surrogate diversity; QAOA/greedy/SA still k=3 from
   the fixed 12-material pool. Provenance contract deliberately keeps
   `illustrative_oracle` (not a generic `literature` tag).
